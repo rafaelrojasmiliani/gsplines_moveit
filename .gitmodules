@@ -1,0 +1,3 @@
+[submodule "gsplines_cpp_ros"]
+	path = gsplines_cpp_ros
+	url = https://github.com/rafaelrojasmiliani/gsplines_cpp_ros.git
