@@ -1,13 +1,13 @@
-#ifndef MINIMUM_JERK_ADAPTER
-#define MINIMUM_JERK_ADAPTER
+#ifndef MINIMUM_CRANK_ADAPTER
+#define MINIMUM_CRANK_ADAPTER
 #include <gsplines_moveit/MinimumSobolevSeminormAdapter.hpp>
 
 namespace gsplines_moveit {
 
-class MinimumJerkAdapter : public MinimumSobolevSeminormAdapter {
+class MinimumCrankAdapter : public MinimumSobolevSeminormAdapter {
 private:
 public:
-  MinimumJerkAdapter();
+  MinimumCrankAdapter();
 
   bool adaptAndPlan(const PlannerFn &planner,
                     const planning_scene::PlanningSceneConstPtr &planning_scene,
