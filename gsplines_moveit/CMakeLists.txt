@@ -18,7 +18,7 @@ catkin_package(
   gsplines_ros
   gsplines_msgs)
 
-add_library(gsplines_moveit src/gsplines_moveit.cpp)
+add_library(gsplines_moveit src/MinimumSobolevSeminormAdapter.cpp)
 include_directories(${catkin_INCLUDE_DIRS} ${Eigen3_INCLUDE_DIRS} include/)
 target_link_libraries(gsplines_moveit ${catkin_LIBRARIES} ${Eigen3_LIBRARIES})
 

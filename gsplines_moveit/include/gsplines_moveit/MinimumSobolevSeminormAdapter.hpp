@@ -1,13 +1,12 @@
-#ifndef MINIMUMSOBOLEVSEMINORMADAPTER_H
-#define MINIMUMSOBOLEVSEMINORMADAPTER_H
 #include <class_loader/class_loader.hpp>
 #include <moveit/planning_request_adapter/planning_request_adapter.h>
+#ifndef MINIMUMSOBOLEVSEMINORMADAPTER_H
+#define MINIMUMSOBOLEVSEMINORMADAPTER_H
 
 namespace gsplines_moveit {
 
 class MinimumSobolevSeminormAdapter
-    : public planning_request_adapter::PlanningRequestAdapter {
-private:
+    : public ::planning_request_adapter::PlanningRequestAdapter {
 public:
   MinimumSobolevSeminormAdapter();
 
