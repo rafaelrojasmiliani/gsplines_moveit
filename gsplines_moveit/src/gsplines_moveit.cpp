@@ -3,6 +3,21 @@
 #include <gsplines_ros/gsplines_ros.hpp>
 
 namespace gsplines_moveit {
+
+robot_trajectory::RobotTrajectory function_to_robot_trajectory(
+    const gsplines::functions::FunctionBase &_trj,
+    const robot_model::RobotModelConstPtr &robot_model,
+    const moveit::core::RobotState &reference_state, const std::string &group,
+    const std::vector<std::string> &_joint_names, const ros::Duration &_rate) {
+
+  robot_trajectory::RobotTrajectory result(robot_model, group);
+  trajectory_msgs::JointTrajectory joint_trajectory =
+      gsplines_ros::function_expression_to_joint_trajectory_msg(
+          _trj, _joint_names, _rate);
+  result.setRobotTrajectoryMsg(reference_state, joint_trajectory);
+  return result;
+}
+
 Eigen::MatrixXd robot_trajectory_waypoints(moveit_msgs::RobotTrajectory &_msg) {
   return gsplines_ros::waypoint_matrix(_msg.joint_trajectory);
 }
