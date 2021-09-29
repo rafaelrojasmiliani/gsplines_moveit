@@ -4,10 +4,10 @@
 
 namespace gsplines_moveit {
 
-class MinimumCrankAdapter : public MinimumSobolevSeminormAdapter {
+class MinimumCrackleAdapter : public MinimumSobolevSeminormAdapter {
 private:
 public:
-  MinimumCrankAdapter();
+  MinimumCrackleAdapter();
 
   bool adaptAndPlan(const PlannerFn &planner,
                     const planning_scene::PlanningSceneConstPtr &planning_scene,
