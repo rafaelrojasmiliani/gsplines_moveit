@@ -11,10 +11,12 @@ robot_trajectory::RobotTrajectory function_to_robot_trajectory(
     const std::vector<std::string> &_joint_names, const ros::Duration &_rate) {
 
   robot_trajectory::RobotTrajectory result(robot_model, group);
+
   trajectory_msgs::JointTrajectory joint_trajectory =
-      gsplines_ros::function_expression_to_joint_trajectory_msg(
-          _trj, _joint_names, _rate);
+      gsplines_ros::function_to_joint_trajectory_msg(_trj, _joint_names, _rate);
+
   result.setRobotTrajectoryMsg(reference_state, joint_trajectory);
+
   return result;
 }
 
@@ -75,28 +77,41 @@ minimum_sobolev_semi_norm(const robot_trajectory::RobotTrajectory &_trj,
 }
 
 robot_trajectory::RobotTrajectory minimum_sobolev_semi_norm_robot_trajectory(
-    const moveit_msgs::RobotTrajectory &_msg,
-    const robot_model::RobotModelConstPtr &robot_model,
-    const std::string &group, const gsplines::basis::Basis &_basis,
-    std::vector<std::pair<std::size_t, double>> _weights, double _exec_time) {
-
-  robot_trajectory::RobotTrajectory result(robot_model, group);
-}
-
-robot_trajectory::RobotTrajectory minimum_sobolev_semi_norm_robot_trajectory(
     const robot_trajectory::RobotTrajectory &_trj,
     const gsplines::basis::Basis &_basis,
-    std::vector<std::pair<std::size_t, double>> _weights, double _exec_time) {}
+    std::vector<std::pair<std::size_t, double>> _weights, double _exec_time,
+    const ros::Duration &_step, const std_msgs::Header _header) {
 
-robot_trajectory::RobotTrajectory minimum_sobolev_semi_norm_robot_trajectory(
-    const Eigen::MatrixXd &, const robot_model::RobotModelConstPtr &robot_model,
-    const std::string &group, const gsplines::basis::Basis &_basis,
-    std::vector<std::pair<std::size_t, double>> _weights, double _exec_time) {}
+  const moveit::core::JointModelGroup *group = _trj.getGroup();
+  const moveit::core::RobotModel &rmodel = group->getParentModel();
 
-robot_trajectory::RobotTrajectory minimum_sobolev_semi_norm_robot_trajectory(
-    const Eigen::MatrixXd &, const robot_model::RobotModelConstPtr &robot_model,
-    const robot_model::JointModelGroup *group,
-    const gsplines::basis::Basis &_basis,
-    std::vector<std::pair<std::size_t, double>> _weights, double _exec_time) {}
+  const std::vector<int> &idx = group->getVariableIndexList();
+  const std::vector<std::string> &vars = group->getVariableNames();
+
+  std::vector<double> velocity_bounds;
+  std::vector<double> acceleration_bounds;
+  std::transform(vars.begin(), vars.end(), std::back_inserter(velocity_bounds),
+                 [rmodel](const std::string &_var_name) {
+                   return rmodel.getVariableBounds(_var_name).max_velocity_;
+                 });
+
+  std::transform(vars.begin(), vars.end(),
+                 std::back_inserter(acceleration_bounds),
+                 [rmodel](const std::string &_var_name) {
+                   return rmodel.getVariableBounds(_var_name).max_acceleration_;
+                 });
+
+  Eigen::MatrixXd waypoints = robot_trajectory_waypoints(_trj);
+
+  trajectory_msgs::JointTrajectory joint_trajectory =
+      gsplines_ros::minimum_sobolev_semi_norm_joint_trajectory(
+          waypoints, vars, _basis, _weights, _exec_time, _step, _header);
+
+  robot_trajectory::RobotTrajectory result(_trj, true);
+
+  result.setRobotTrajectoryMsg(_trj.getFirstWayPoint(), joint_trajectory);
+
+  return result;
+}
 
 } // namespace gsplines_moveit
