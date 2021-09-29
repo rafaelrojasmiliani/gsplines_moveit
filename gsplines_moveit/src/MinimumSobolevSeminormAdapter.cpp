@@ -1,5 +1,7 @@
 
+#include <gsplines/Optimization/ipopt_solver.hpp>
 #include <gsplines_moveit/MinimumSobolevSeminormAdapter.hpp>
+#include <gsplines_ros/gsplines_ros.hpp>
 
 namespace gsplines_moveit {
 
@@ -12,13 +14,13 @@ bool MinimumSobolevSeminormAdapter::adaptAndPlan(
     const planning_interface::MotionPlanRequest &req,
     planning_interface::MotionPlanResponse &res,
     std::vector<std::size_t> &added_path_index) const {
-  /*
-    bool result = planner(planning_scene, req, res);
-    if (result && res.trajectory_) {
 
-      return result;
-    }
-    */
+  bool result = planner(planning_scene, req, res);
+  if (result && res.trajectory_) {
+
+    return result;
+  }
+
   return true;
 }
 
