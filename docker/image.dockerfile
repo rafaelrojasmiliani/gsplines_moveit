@@ -28,9 +28,6 @@ RUN chmod 777 /etc/vim/bundle
 
 RUN pip3 install setuptools matplotlib Mosek scipy quadpy six cython tk
 
-RUN sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
-RUN apt-key adv --keyserver 'hkp://keyserver.ubuntu.com:80' --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
-RUN apt-get update
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends -o Dpkg::Options::="--force-confnew" \
                     ros-noetic-ifopt  ros-noetic-pinocchio  python3-catkin-tools \
                     ros-noetic-plotjuggler \
@@ -47,7 +44,10 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends -o
                     ros-noetic-rqt-gui \
                     ros-noetic-rqt-gui-py \
                     ros-noetic-rqt-py-common \
-                    ros-noetic-rqt-joint-trajectory-controller
+                    ros-noetic-rqt-joint-trajectory-controller \
+                    ros-noetic-panda-moveit-config \
+                    ros-noetic-franka-gazebo \
+
 
 
 RUN mkdir -p /aux_ws/src

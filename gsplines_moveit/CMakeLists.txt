@@ -32,3 +32,6 @@ install(
 
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/gsplines_moveit
         DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}/..)
+
+install(DIRECTORY launch/
+        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch)

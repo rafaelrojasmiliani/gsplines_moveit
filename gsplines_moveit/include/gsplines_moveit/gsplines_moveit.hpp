@@ -22,5 +22,17 @@ robot_trajectory::RobotTrajectory minimum_sobolev_semi_norm_robot_trajectory(
     std::vector<std::pair<std::size_t, double>> _weights, double _exec_time,
     const ros::Duration &_step,
     const std_msgs::Header _header = std_msgs::Header());
+
+bool compute_minimum_sobolev_semi_norm_robot_trajectory(
+    robot_trajectory::RobotTrajectory &_trj,
+    const gsplines::basis::Basis &_basis,
+    std::vector<std::pair<std::size_t, double>> _weights, double _exec_time,
+    const ros::Duration &_step,
+    const std_msgs::Header _header = std_msgs::Header());
+
+bool compute_minimum_jerk_trajectory(robot_trajectory::RobotTrajectory &_trj,
+                                     const ros::Duration &_step,
+                                     double _vel_factor = 1.0,
+                                     double _acc_factor = 1.0);
 } // namespace gsplines_moveit
 #endif
