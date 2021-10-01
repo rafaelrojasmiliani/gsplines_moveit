@@ -45,14 +45,17 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends -o
                     ros-noetic-rqt-gui-py \
                     ros-noetic-rqt-py-common \
                     ros-noetic-rqt-joint-trajectory-controller \
+                    ros-noetic-libfranka \
                     ros-noetic-panda-moveit-config \
-                    ros-noetic-franka-gazebo \
+                    ros-noetic-combined-robot-hw \
+                    ros-noetic-tf-conversions
 
 
 
 RUN mkdir -p /aux_ws/src
 RUN git clone https://github.com/rafaelrojasmiliani/ur_description_minimal.git /aux_ws/src/ur_description_minimal
 RUN git clone https://github.com/tork-a/rqt_joint_trajectory_plot.git /aux_ws/src/rqt_joint_trajectory_plot
+RUN git clone --branch noetic-devel https://github.com/frankaemika/franka_ros.git /aux_ws/src/franka_ros
 RUN bash -c 'source /opt/ros/noetic/setup.bash && cd /aux_ws && catkin config --install --install-space /opt/ros/noetic/ --extend /opt/ros/noetic/ && catkin build'
 
 
