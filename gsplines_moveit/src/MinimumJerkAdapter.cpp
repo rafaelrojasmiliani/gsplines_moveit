@@ -30,7 +30,7 @@ bool MinimumJerkAdapter::adaptAndPlan(
 }
 
 std::string MinimumJerkAdapter::getDescription() const {
-  return "Minimizes the desired sobolev seminorm";
+  return "Minimizes the jerk";
 }
 void MinimumJerkAdapter::initialize(const ros::NodeHandle &node_handle){};
 } // namespace gsplines_moveit

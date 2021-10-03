@@ -1,15 +1,15 @@
 <?xml version="1.0"?>
 <library path="lib/libgsplines_moveit">
-  <class type="gsplines_moveit::MinimumSobolevSeminormAdapter" base_class_type="planning_request_adapter::PlanningRequestAdapter">
-    <description>Computes the trajectory that minimizes the given sobolev seminorm and passes trough a set of ponts</description>
+  <class name="gsplines_moveit/MinimumSobolevSeminormAdapter" type="gsplines_moveit::MinimumSobolevSeminormAdapter" base_class_type="planning_request_adapter::PlanningRequestAdapter">
+    <description>Computes the trajectory that minimizes the given sobolev seminorm and passes trough a set of points</description>
   </class>
-  <class type="gsplines_moveit::MinimumJerkAdapter" base_class_type="planning_request_adapter::PlanningRequestAdapter">
-    <description>Computes the minimum jerk trajectory passes trough a set of ponts</description>
+  <class name="gsplines_moveit/MinimumJerkAdapter" type="gsplines_moveit::MinimumJerkAdapter" base_class_type="planning_request_adapter::PlanningRequestAdapter">
+    <description>Computes the minimum jerk trajectory passes trough a set of points</description>
   </class>
-  <class type="gsplines_moveit::MinimumSnapAdapter" base_class_type="planning_request_adapter::PlanningRequestAdapter">
-    <description>Computes the minimum jerk trajectory passes trough a set of ponts</description>
+  <class name="gsplines_moveit/MinimumSnapAdapter" type="gsplines_moveit::MinimumSnapAdapter" base_class_type="planning_request_adapter::PlanningRequestAdapter">
+    <description>Computes the minimum snap trajectory passes trough a set of points</description>
   </class>
-  <class type="gsplines_moveit::MinimumCrankAdapter" base_class_type="planning_request_adapter::PlanningRequestAdapter">
-    <description>Computes the minimum jerk trajectory passes trough a set of ponts</description>
+  <class name="gsplines_moveit/MinimumCrankAdapter" type="gsplines_moveit::MinimumCrankAdapter" base_class_type="planning_request_adapter::PlanningRequestAdapter">
+    <description>Computes the minimum crank trajectory passes trough a set of points</description>
   </class>
 </library>

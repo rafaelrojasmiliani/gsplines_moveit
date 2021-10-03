@@ -33,6 +33,6 @@
   <depend>rospy</depend>
   <!-- The export tag contains other, unspecified, tags -->
   <export>
-    <gsplines_moveit plugin="${prefix}/gsplines_adapter_plugins.xml"/>
+    <moveit_core plugin="${prefix}/gsplines_adapter_plugins.xml"/>
   </export>
 </package>
