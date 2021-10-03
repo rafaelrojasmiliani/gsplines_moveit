@@ -15,7 +15,7 @@
       <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf -model panda -z 0.2 -gazebo_namespace '/myrobot/gazebo' -unpause"/>
       <!-- 6. Launch RVIZ and Gazebo -->
       <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true" output="screen"/>
-      <node name="rviz" pkg="rviz" type="rviz" output="screen" args=""/>
+      <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d $(find gsplines_moveit)/config/rviz_config.rviz"/>
       <!-- 6.1 Load moeit control parameters -->
       <rosparam file="$(find gsplines_moveit)/config/franka_control.yaml" command="load"/>
       <!-- 6.1.1 ask controller manager to load and start the controller -->

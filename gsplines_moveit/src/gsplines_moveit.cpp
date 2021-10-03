@@ -164,6 +164,8 @@ bool compute_minimum_jerk_trajectory(robot_trajectory::RobotTrajectory &_trj,
 
   std::vector<double> velocity_bounds;
   std::vector<double> acceleration_bounds;
+
+  ROS_INFO("1\n");
   std::transform(joint_names.begin(), joint_names.end(),
                  std::back_inserter(velocity_bounds),
                  [rmodel, _vel_factor](const std::string &_var_name) {
@@ -171,6 +173,7 @@ bool compute_minimum_jerk_trajectory(robot_trajectory::RobotTrajectory &_trj,
                           _vel_factor;
                  });
 
+  ROS_INFO("2\n");
   std::transform(
       joint_names.begin(), joint_names.end(),
       std::back_inserter(acceleration_bounds),
@@ -179,12 +182,15 @@ bool compute_minimum_jerk_trajectory(robot_trajectory::RobotTrajectory &_trj,
                _acc_factor;
       });
 
+  ROS_INFO("3\n");
   Eigen::MatrixXd waypoints = robot_trajectory_waypoints(_trj);
 
+  ROS_INFO("4\n");
   trajectory_msgs::JointTrajectory joint_trajectory =
       gsplines_ros::minimum_jerk_trajectory(
           waypoints, joint_names, velocity_bounds, acceleration_bounds, _step);
 
+  ROS_INFO("5\n");
   _trj.setRobotTrajectoryMsg(_trj.getFirstWayPoint(), joint_trajectory);
 
   return true;
