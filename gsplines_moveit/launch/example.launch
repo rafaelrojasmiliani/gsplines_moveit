@@ -2,29 +2,29 @@
 <launch>
   <group ns="myrobot">
     <!-- Planning scene required parameters -->
-    <param name="robot_description" command="xacro '$(find franka_description)/robots/panda_arm.urdf.xacro' hand:=true gazebo:=true"/>
-    <param name="robot_description_semantic" command="$(find xacro)/xacro '$(find panda_moveit_config)/config/panda_arm_hand.srdf.xacro'"/>
-    <group ns="robot_description_planning">
-      <rosparam command="load" file="$(find panda_moveit_config)/config/joint_limits.yaml"/>
-    </group>
-    <group ns="robot_description_kinematics">
-      <rosparam command="load" file="$(find panda_moveit_config)/config/kinematics.yaml"/>
-    </group>
-    <!-- 5. Introduce robot in Gazebo  -->
-    <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf -model panda -z 0.2 -gazebo_namespace '/myrobot/gazebo' -unpause"/>
-    <!-- 6. Launch RVIZ and Gazebo -->
-    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true" output="screen"/>
-    <node name="rviz" pkg="rviz" type="rviz" output="screen" args=""/>
-    <!-- 6.1 Load moeit control parameters -->
     <group ns="panda">
+      <param name="robot_description" command="xacro '$(find franka_description)/robots/panda_arm.urdf.xacro' hand:=true gazebo:=true"/>
+      <param name="robot_description_semantic" command="$(find xacro)/xacro '$(find panda_moveit_config)/config/panda_arm_hand.srdf.xacro'"/>
+      <group ns="robot_description_planning">
+        <rosparam command="load" file="$(find panda_moveit_config)/config/joint_limits.yaml"/>
+      </group>
+      <group ns="robot_description_kinematics">
+        <rosparam command="load" file="$(find panda_moveit_config)/config/kinematics.yaml"/>
+      </group>
+      <!-- 5. Introduce robot in Gazebo  -->
+      <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf -model panda -z 0.2 -gazebo_namespace '/myrobot/gazebo' -unpause"/>
+      <!-- 6. Launch RVIZ and Gazebo -->
+      <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true" output="screen"/>
+      <node name="rviz" pkg="rviz" type="rviz" output="screen" args=""/>
+      <!-- 6.1 Load moeit control parameters -->
       <rosparam file="$(find gsplines_moveit)/config/franka_control.yaml" command="load"/>
+      <!-- 6.1.1 ask controller manager to load and start the controller -->
+      <node name="control_spawner" pkg="controller_manager" type="spawner" args="effort_joint_trajectory_controller franka_state_controller" respawn="false" output="screen"/>
+      <node name="joint_state_publisher" type="joint_state_publisher" pkg="joint_state_publisher">
+        <rosparam param="source_list">[franka_state_controller/joint_states, franka_gripper/joint_states] </rosparam>
+        <param name="rate" value="30"/>
+      </node>
     </group>
-    <!-- 6.1.1 ask controller manager to load and start the controller -->
-    <node name="control_spawner" pkg="controller_manager" type="spawner" args="--namespace='/myrobot/panda' effort_joint_trajectory_controller franka_state_controller" respawn="false" output="screen"/>
-    <node name="joint_state_publisher" type="joint_state_publisher" pkg="joint_state_publisher">
-      <rosparam param="source_list">[franka_state_controller/joint_states, franka_gripper/joint_states] </rosparam>
-      <param name="rate" value="30"/>
-    </node>
     <!-- 6.2 launch Gazebo -->
     <include file="$(find gazebo_ros)/launch/empty_world.launch">
       <arg name="world_name" value="worlds/empty.world"/>
@@ -33,21 +33,23 @@
       <arg name="use_sim_time" value="true"/>
     </include>
     <!-- 7. Launch Move group -->
-    <node name="move_group" pkg="moveit_ros_move_group" type="move_group" respawn="false" output="screen">
-      <!-- 7.1. Associate moveit control configuratio to actual control interface-->
-      <rosparam file="$(find panda_moveit_config)/config/panda_controllers.yaml" command="load"/>
-      <!-- 7.2. load the planning interface plugin-->
-      <param name="planning_plugin" value="ompl_interface/OMPLPlanner"/>
-      <!-- 7.3. Load the planning interface pluging parameters-->
-      <rosparam command="load" file="$(find panda_moveit_config)/config/ompl_planning.yaml"/>
-      <!-- 7.4. Load the planning pipeline-->
-      <param name="request_adapters" value="gsplines_moveit/MinimumJerkAdapter"/>
-      <param name="start_state_max_bounds_error" value="0.1"/>
-      <param name="planning_scene_monitor/publish_planning_scene" value="true"/>
-      <param name="planning_scene_monitor/publish_geometry_updates" value="true"/>
-      <param name="planning_scene_monitor/publish_state_updates" value="true"/>
-      <param name="planning_scene_monitor/publish_transforms_updates" value="true"/>
-      <param name="moveit_controller_manager" value="moveit_simple_controller_manager/MoveItSimpleControllerManager"/>
-    </node>
+    <group ns="panda">
+      <node name="move_group" pkg="moveit_ros_move_group" type="move_group" respawn="true" output="screen">
+        <!-- 7.1. Associate moveit control configuratio to actual control interface-->
+        <rosparam file="$(find gsplines_moveit)/config/panda_controllers.yaml" command="load"/>
+        <!-- 7.2. load the planning interface plugin-->
+        <param name="planning_plugin" value="ompl_interface/OMPLPlanner"/>
+        <!-- 7.3. Load the planning interface pluging parameters-->
+        <rosparam command="load" file="$(find panda_moveit_config)/config/ompl_planning.yaml"/>
+        <!-- 7.4. Load the planning pipeline-->
+        <param name="request_adapters" value="gsplines_moveit/MinimumJerkAdapter default_planner_request_adapters/FixWorkspaceBounds default_planner_request_adapters/FixStartStateBounds default_planner_request_adapters/FixStartStateCollision default_planner_request_adapters/FixStartStatePathConstraints"/>
+        <param name="start_state_max_bounds_error" value="0.1"/>
+        <param name="planning_scene_monitor/publish_planning_scene" value="true"/>
+        <param name="planning_scene_monitor/publish_geometry_updates" value="true"/>
+        <param name="planning_scene_monitor/publish_state_updates" value="true"/>
+        <param name="planning_scene_monitor/publish_transforms_updates" value="true"/>
+        <param name="moveit_controller_manager" value="moveit_simple_controller_manager/MoveItSimpleControllerManager"/>
+      </node>
+    </group>
   </group>
 </launch>
