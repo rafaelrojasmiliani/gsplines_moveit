@@ -166,18 +166,20 @@ bool compute_minimum_jerk_trajectory(robot_trajectory::RobotTrajectory &_trj,
   std::vector<double> acceleration_bounds;
 
   ROS_INFO("1\n");
-  std::transform(joint_names.begin(), joint_names.end(),
+  ROS_INFO("first  joint %s ", joint_names.cbegin()->c_str());
+  std::transform(joint_names.cbegin(), joint_names.cend(),
                  std::back_inserter(velocity_bounds),
-                 [rmodel, _vel_factor](const std::string &_var_name) {
+                 [&rmodel, &_vel_factor](const std::string &_var_name) {
                    return rmodel.getVariableBounds(_var_name).max_velocity_ *
                           _vel_factor;
                  });
 
   ROS_INFO("2\n");
+
   std::transform(
-      joint_names.begin(), joint_names.end(),
+      joint_names.cbegin(), joint_names.cend(),
       std::back_inserter(acceleration_bounds),
-      [rmodel, _acc_factor](const std::string &_var_name) {
+      [&rmodel, &_acc_factor](const std::string &_var_name) {
         return rmodel.getVariableBounds(_var_name).max_acceleration_ *
                _acc_factor;
       });
