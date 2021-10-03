@@ -34,9 +34,9 @@ effort_joint_trajectory_controller:
     panda_joint7: {p: 50, d: 5, i: 0, i_clamp: 1}
 
 
-panda_state_controller:
+franka_state_controller:
   type: franka_control/FrankaStateController
-  arm_id: panda_2
+  arm_id: panda
   joint_names:
     - panda_joint1
     - panda_joint2

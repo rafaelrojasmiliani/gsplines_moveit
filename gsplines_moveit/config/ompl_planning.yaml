@@ -1,0 +1,6 @@
+planner_configs:
+  RRTstar:
+    type: geometric::RRTstar
+    range: 0.3
+    goal_bias: 0.5  
+    delay_collision_checking: 1  # Stop collision checking as soon as C-free parent found. default 1

@@ -40,7 +40,7 @@
         <!-- 7.2. load the planning interface plugin-->
         <param name="planning_plugin" value="ompl_interface/OMPLPlanner"/>
         <!-- 7.3. Load the planning interface pluging parameters-->
-        <rosparam command="load" file="$(find panda_moveit_config)/config/ompl_planning.yaml"/>
+        <rosparam command="load" file="$(find gsplines_moveit)/config/ompl_planning.yaml"/>
         <!-- 7.4. Load the planning pipeline-->
         <param name="request_adapters" value="gsplines_moveit/MinimumJerkAdapter default_planner_request_adapters/FixWorkspaceBounds default_planner_request_adapters/FixStartStateBounds default_planner_request_adapters/FixStartStateCollision default_planner_request_adapters/FixStartStatePathConstraints"/>
         <param name="start_state_max_bounds_error" value="0.1"/>

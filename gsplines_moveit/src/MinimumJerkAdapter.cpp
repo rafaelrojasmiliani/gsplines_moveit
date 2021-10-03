@@ -20,7 +20,6 @@ bool MinimumJerkAdapter::adaptAndPlan(
 
   bool result = planner(planning_scene, req, res);
   if (result && res.trajectory_) {
-    ROS_INFO("calling compute_minimum_jerk_trajectory\n");
     result = compute_minimum_jerk_trajectory(
         *res.trajectory_, ros::Duration(0.01), req.max_velocity_scaling_factor,
         req.max_acceleration_scaling_factor);
