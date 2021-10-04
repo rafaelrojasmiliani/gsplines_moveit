@@ -1,6 +1,22 @@
+---
 planner_configs:
   RRTstar:
     type: geometric::RRTstar
     range: 0.3
-    goal_bias: 0.5  
-    delay_collision_checking: 1  # Stop collision checking as soon as C-free parent found. default 1
+    goal_bias: 0.5
+    delay_collision_checking: 1
+panda_arm:
+  default_planner_config: RRTstar
+  planner_configs:
+    - RRTstar
+  longest_valid_segment_fraction: 0.1
+panda_arm_hand:
+  default_planner_config: RRTstar
+  planner_configs:
+    - RRTstar
+  longest_valid_segment_fraction: 0.1
+hand:
+  default_planner_config: RRTstar
+  planner_configs:
+    - RRTstar
+  longest_valid_segment_fraction: 0.1

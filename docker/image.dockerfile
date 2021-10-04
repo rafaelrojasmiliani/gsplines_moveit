@@ -30,7 +30,7 @@ RUN pip3 install setuptools matplotlib Mosek scipy quadpy six cython tk
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends -o Dpkg::Options::="--force-confnew" \
                     ros-noetic-ifopt  ros-noetic-pinocchio  python3-catkin-tools \
-                    ros-noetic-plotjuggler \
+                    ros-noetic-plotjuggler-ros \
                     ros-noetic-joint-trajectory-controller \
                     ros-noetic-joint-trajectory-action \
                     ros-noetic-xacro \
@@ -48,7 +48,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends -o
                     ros-noetic-libfranka \
                     ros-noetic-panda-moveit-config \
                     ros-noetic-combined-robot-hw \
-                    ros-noetic-tf-conversions
+                    ros-noetic-tf-conversions \
+                    ros-noetic-rqt-reconfigure
 
 
 
