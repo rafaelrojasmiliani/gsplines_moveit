@@ -21,7 +21,7 @@ public:
 
   ~MinimumSobolevSeminormAdapter() override;
 
-private:
+protected:
   class Impl;
   std::unique_ptr<Impl> m_impl;
 };
