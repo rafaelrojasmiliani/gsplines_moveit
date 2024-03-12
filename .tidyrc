@@ -1,0 +1,11 @@
+input-xml: yes
+quiet: yes
+indent: yes
+indent-attributes: yes
+literal-attributes: yes
+indent-spaces: 4
+char-encoding: utf8
+wrap: 86
+wrap-attributes: yes
+vertical-space: yes
+tab-size: 4
