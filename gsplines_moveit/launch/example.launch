@@ -1,55 +1,162 @@
 <?xml version="1.0"?>
 <launch>
-  <group ns="myrobot">
-    <!-- Planning scene required parameters -->
-    <group ns="panda">
-      <param name="robot_description" command="xacro '$(find franka_description)/robots/panda_arm.urdf.xacro' hand:=true gazebo:=true"/>
-      <param name="robot_description_semantic" command="$(find xacro)/xacro '$(find panda_moveit_config)/config/panda_arm_hand.srdf.xacro'"/>
-      <group ns="robot_description_planning">
-        <rosparam command="load" file="$(find panda_moveit_config)/config/joint_limits.yaml"/>
-      </group>
-      <group ns="robot_description_kinematics">
-        <rosparam command="load" file="$(find panda_moveit_config)/config/kinematics.yaml"/>
-      </group>
-      <!-- 5. Introduce robot in Gazebo  -->
-      <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model" args="-param robot_description -urdf -model panda -z 0.2 -gazebo_namespace '/myrobot/gazebo' -unpause"/>
-      <!-- 6. Launch RVIZ and Gazebo -->
-      <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true" output="screen"/>
-      <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d $(find gsplines_moveit)/config/rviz_config.rviz"/>
-      <!-- 6.1 Load moeit control parameters -->
-      <rosparam file="$(find gsplines_moveit)/config/franka_control.yaml" command="load"/>
-      <!-- 6.1.1 ask controller manager to load and start the controller -->
-      <node name="control_spawner" pkg="controller_manager" type="spawner" args="effort_joint_trajectory_controller franka_state_controller" respawn="false" output="screen"/>
-      <node name="joint_state_publisher" type="joint_state_publisher" pkg="joint_state_publisher">
-        <rosparam param="source_list">[franka_state_controller/joint_states, franka_gripper/joint_states] </rosparam>
-        <param name="rate" value="30"/>
-      </node>
+    <env name="ROSCONSOLE_FORMAT"
+         value="[${severity}][${node}:${file}:${line}]: ${message}" />
+    <env name="ROSCONSOLE_CONFIG_FILE"
+         value="$(dirname)/../config/rosconsole.config" />
+    <arg name="arm_id"
+         default="panda"
+         doc="Name of the panda robot to spawn" />
+    <arg name="hand"
+         default="true"
+         doc="Should a franka hand be mounted on the flange?" />
+    <arg name="initial_joint_positions"
+         doc="Initial joint configuration of the panda. Specify as a list of name/value pairs in form of '-J [name-of-joint] [value-in-rad]'. Default is a 90 degree bend in the elbow"
+         default="-J $(arg arm_id)_joint1 0
+                -J $(arg arm_id)_joint2 -0.785398163
+                -J $(arg arm_id)_joint3 0
+                -J $(arg arm_id)_joint4 -2.35619449
+                -J $(arg arm_id)_joint5 0
+                -J $(arg arm_id)_joint6 1.57079632679
+                -J $(arg arm_id)_joint7 0.785398163397
+                -J $(arg arm_id)_finger_joint1 0.001
+                -J $(arg arm_id)_finger_joint2 0.001" />
+    <group ns="example">
+        <!-- +++++++++++++++++ -->
+        <!-- 0 launch Gazebo -->
+        <!-- +++++++++++++++++ -->
+        <include file="$(find gazebo_ros)/launch/empty_world.launch">
+            <arg name="world_name"
+                 value="worlds/empty.world" />
+            <!-- Always start in paused mode, and only unpause when spawning the model -->
+            <arg name="paused"
+                 value="true" />
+            <arg name="gui"
+                 value="true" />
+            <arg name="use_sim_time"
+                 value="true" />
+        </include>
+        <group ns="$(arg arm_id)">
+            <!-- ++++++++++++++++++++++ -->
+            <!-- 1. Load robot description -->
+            <!-- ++++++++++++++++++++++ -->
+            <param name="robot_description"
+                   command="xacro $(find franka_description)/robots/panda/panda.urdf.xacro
+                    gazebo:=true 
+                    hand:=$(arg hand)
+              arm_id:=$(arg arm_id)" />
+            <!-- ++++++++++++++++++++++ -->
+            <!-- 2. Load the robot into gazebo -->
+            <!-- ++++++++++++++++++++++ -->
+            <node name="$(arg arm_id)_model_spawner"
+                  pkg="gazebo_ros"
+                  type="spawn_model"
+                  args="-param robot_description -urdf -model $(arg arm_id) -unpause -gazebo_namespace /example/gazebo
+              $(arg initial_joint_positions)
+              " />
+            <!-- ++++++++++++++++++++++ -->
+            <!-- 3. Load the gazebo controllers -->
+            <!-- ++++++++++++++++++++++ -->
+            <rosparam file="$(find franka_gazebo)/config/franka_hw_sim.yaml"
+                      subst_value="true" />
+            <!-- ++++++++++++++++++++++ -->
+            <!-- 4. Load simulated controllers -->
+            <!-- ++++++++++++++++++++++ -->
+            <!-- 4.1 load the controllers into the parameter server -->
+            <rosparam file="$(find franka_gazebo)/config/sim_controllers.yaml"
+                      subst_value="true" />
+            <!-- 4.2 load the hand control if in the -->
+            <node pkg="controller_manager"
+                  type="spawner"
+                  name="$(arg arm_id)_gripper_spawner"
+                  if="$(arg hand)"
+                  args="franka_gripper"
+                  respawn="false" />
+            <!-- 4.3 load thee arm control into gazebo -->
+            <node pkg="controller_manager"
+                  type="spawner"
+                  name="$(arg arm_id)_controller_spawner"
+                  respawn="false"
+                  output="screen"
+                  args="--wait-for initialized franka_state_controller position_joint_trajectory_controller" />
+            <!-- +++++++++++++++++++++++++++++++ -->
+            <!-- Load robot description semantic -->
+            <!-- +++++++++++++++++++++++++++++++ -->
+            <param name="robot_description_semantic"
+                   command="$(find xacro)/xacro $(find panda_moveit_config)/config/panda.srdf.xacro
+                    hand:=$(arg hand)
+                    arm_id:=$(arg arm_id)" />
+            <!-- +++++++++++++++++++++++++++++++ -->
+            <!-- Load robot description semantic -->
+            <!-- +++++++++++++++++++++++++++++++ -->
+            <group ns="robot_description_planning">
+                <rosparam file="$(find panda_moveit_config)/config/joint_limits.yaml"
+                          subst_value="true" />
+            </group>
+            <!-- +++++++++++++++++++++++++++++++ -->
+            <!-- load kinematic engine           -->
+            <!-- +++++++++++++++++++++++++++++++ -->
+            <group ns="robot_description_kinematics">
+                <rosparam file="$(find panda_moveit_config)/config/kinematics.yaml"
+                          subst_value="true" />
+            </group>
+            <!-- +++++++++++++++++++++++++++++++ -->
+            <!-- launch moveit           -->
+            <!-- +++++++++++++++++++++++++++++++ -->
+            <node name="move_group"
+                  pkg="moveit_ros_move_group"
+                  type="move_group"
+                  respawn="true"
+                  output="screen">
+                <!-- 7.1. Associate moveit control configuratio to actual control interface-->
+                <rosparam file="$(find gsplines_moveit)/config/control_lists.yaml"
+                          subst_value="true" />
+                <!-- 7.2. load the planning interface plugin-->
+                <param name="planning_plugin"
+                       value="ompl_interface/OMPLPlanner" />
+                <!-- 7.3. Load the planning interface pluging parameters-->
+                <rosparam command="load"
+                          file="$(find gsplines_moveit)/config/ompl_planning.yaml" />
+                <!-- 7.4. Load the planning pipeline-->
+                <param name="request_adapters"
+                       value="gsplines_moveit/MinimumJerkAdapter default_planner_request_adapters/FixWorkspaceBounds default_planner_request_adapters/FixStartStateBounds default_planner_request_adapters/FixStartStateCollision default_planner_request_adapters/FixStartStatePathConstraints" />
+                <param name="start_state_max_bounds_error"
+                       value="0.1" />
+                <param name="planning_scene_monitor/publish_planning_scene"
+                       value="true" />
+                <param name="planning_scene_monitor/publish_geometry_updates"
+                       value="true" />
+                <param name="planning_scene_monitor/publish_state_updates"
+                       value="true" />
+                <param name="planning_scene_monitor/publish_transforms_updates"
+                       value="true" />
+                <param name="moveit_controller_manager"
+                       value="moveit_simple_controller_manager/MoveItSimpleControllerManager" />
+            </node>
+            <!-- +++++++++++++++++++++++++++++++ -->
+            <!-- launch robot state publisher           -->
+            <!-- +++++++++++++++++++++++++++++++ -->
+            <node name="robot_state_publisher"
+                  pkg="robot_state_publisher"
+                  type="robot_state_publisher"
+                  respawn="true"
+                  output="screen" />
+            <!-- +++++++++++++++++++++++++++++++ -->
+            <!-- launch rviz           -->
+            <!-- +++++++++++++++++++++++++++++++ -->
+            <node name="rviz"
+                  pkg="rviz"
+                  type="rviz"
+                  output="screen"
+                  args="-d $(find gsplines_moveit)/config/rviz_config.rviz" />
+            <node name="joint_state_publisher"
+                  type="joint_state_publisher"
+                  pkg="joint_state_publisher">
+                <rosparam param="source_list">[franka_state_controller/joint_states,
+                franka_gripper/joint_states]</rosparam>
+                <param name="rate"
+                       value="30" />
+            </node>
+        </group>
     </group>
-    <!-- 6.2 launch Gazebo -->
-    <include file="$(find gazebo_ros)/launch/empty_world.launch">
-      <arg name="world_name" value="worlds/empty.world"/>
-      <arg name="paused" value="true"/>
-      <arg name="gui" value="true"/>
-      <arg name="use_sim_time" value="true"/>
-    </include>
-    <!-- 7. Launch Move group -->
-    <group ns="panda">
-      <node name="move_group" pkg="moveit_ros_move_group" type="move_group" respawn="true" output="screen">
-        <!-- 7.1. Associate moveit control configuratio to actual control interface-->
-        <rosparam file="$(find gsplines_moveit)/config/panda_controllers.yaml" command="load"/>
-        <!-- 7.2. load the planning interface plugin-->
-        <param name="planning_plugin" value="ompl_interface/OMPLPlanner"/>
-        <!-- 7.3. Load the planning interface pluging parameters-->
-        <rosparam command="load" file="$(find gsplines_moveit)/config/ompl_planning.yaml"/>
-        <!-- 7.4. Load the planning pipeline-->
-        <param name="request_adapters" value="gsplines_moveit/MinimumJerkAdapter default_planner_request_adapters/FixWorkspaceBounds default_planner_request_adapters/FixStartStateBounds default_planner_request_adapters/FixStartStateCollision default_planner_request_adapters/FixStartStatePathConstraints"/>
-        <param name="start_state_max_bounds_error" value="0.1"/>
-        <param name="planning_scene_monitor/publish_planning_scene" value="true"/>
-        <param name="planning_scene_monitor/publish_geometry_updates" value="true"/>
-        <param name="planning_scene_monitor/publish_state_updates" value="true"/>
-        <param name="planning_scene_monitor/publish_transforms_updates" value="true"/>
-        <param name="moveit_controller_manager" value="moveit_simple_controller_manager/MoveItSimpleControllerManager"/>
-      </node>
-    </group>
-  </group>
 </launch>
