@@ -1,4 +1,5 @@
 
+#include <class_loader/class_loader.hpp>
 #include <gsplines_moveit/MinimumJerkAdapter.hpp>
 
 #include <gsplines/Basis/BasisLegendre.hpp>
@@ -9,14 +10,12 @@
 
 namespace gsplines_moveit {
 
-MinimumJerkAdapter::MinimumJerkAdapter() : MinimumSobolevSeminormAdapter() {}
-
 bool MinimumJerkAdapter::adaptAndPlan(
     const PlannerFn &planner,
     const planning_scene::PlanningSceneConstPtr &planning_scene,
     const planning_interface::MotionPlanRequest &req,
     planning_interface::MotionPlanResponse &res,
-    std::vector<std::size_t> &added_path_index) const {
+    std::vector<std::size_t> &) const {
 
   bool result = planner(planning_scene, req, res);
   if (result && res.trajectory_) {
@@ -32,7 +31,7 @@ bool MinimumJerkAdapter::adaptAndPlan(
 std::string MinimumJerkAdapter::getDescription() const {
   return "Minimizes the jerk";
 }
-void MinimumJerkAdapter::initialize(const ros::NodeHandle &node_handle){};
+void MinimumJerkAdapter::initialize(const ros::NodeHandle &) {};
 } // namespace gsplines_moveit
 CLASS_LOADER_REGISTER_CLASS(gsplines_moveit::MinimumJerkAdapter,
                             planning_request_adapter::PlanningRequestAdapter);

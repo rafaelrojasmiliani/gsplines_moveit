@@ -1,6 +1,4 @@
-
-#ifndef MINIMUM_SNAP_ADAPTER
-#define MINIMUM_SNAP_ADAPTER
+#pragma once
 #include <gsplines_moveit/MinimumSobolevSeminormAdapter.hpp>
 
 namespace gsplines_moveit {
@@ -8,8 +6,6 @@ namespace gsplines_moveit {
 class MinimumSnapAdapter : public MinimumSobolevSeminormAdapter {
 private:
 public:
-  MinimumSnapAdapter();
-
   bool adaptAndPlan(const PlannerFn &planner,
                     const planning_scene::PlanningSceneConstPtr &planning_scene,
                     const planning_interface::MotionPlanRequest &req,
@@ -21,4 +17,3 @@ public:
 };
 
 } // namespace gsplines_moveit
-#endif

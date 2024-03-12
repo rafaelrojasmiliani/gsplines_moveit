@@ -1,5 +1,4 @@
-#ifndef MINIMUM_JERK_ADAPTER
-#define MINIMUM_JERK_ADAPTER
+#pragma once
 #include <gsplines_moveit/MinimumSobolevSeminormAdapter.hpp>
 
 namespace gsplines_moveit {
@@ -7,8 +6,6 @@ namespace gsplines_moveit {
 class MinimumJerkAdapter : public MinimumSobolevSeminormAdapter {
 private:
 public:
-  MinimumJerkAdapter();
-
   bool adaptAndPlan(const PlannerFn &planner,
                     const planning_scene::PlanningSceneConstPtr &planning_scene,
                     const planning_interface::MotionPlanRequest &req,
@@ -20,4 +17,3 @@ public:
 };
 
 } // namespace gsplines_moveit
-#endif
