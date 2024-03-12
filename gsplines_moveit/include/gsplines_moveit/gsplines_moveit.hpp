@@ -30,6 +30,19 @@ bool compute_minimum_sobolev_semi_norm_robot_trajectory(
     const ros::Duration &_step,
     const std_msgs::Header _header = std_msgs::Header());
 
+/// Joint waypoints in \ref _trj with a sobolev-semi-norm-optimal trajectory
+/// linearly scaled to minimize the time
+bool compute_minimum_sobolev_semi_norm_robot_trajectory(
+    robot_trajectory::RobotTrajectory
+        &_trj, //< trajectory containing the waypoints
+    const gsplines::basis::Basis &_basis, //< basis
+    std::vector<std::pair<std::size_t, double>>
+        _weights,               //< optimization weights
+    const ros::Duration &_step, //< time step between waypoints
+    double _vel_factor = 1.0,   //< velocity scaling
+    double _acc_factor = 1.0    // < acceleration scaling
+);
+
 bool compute_minimum_jerk_trajectory(robot_trajectory::RobotTrajectory &_trj,
                                      const ros::Duration &_step,
                                      double _vel_factor = 1.0,
