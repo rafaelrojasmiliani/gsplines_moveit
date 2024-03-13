@@ -18,16 +18,15 @@ public:
   using ConfigType =
       gsplines_moveit::MinimumSobolevSeminormDynamicReconfigureConfig;
   dynamic_reconfigure::Server<ConfigType> server_;
-  Impl() {
+  Impl() : server_(ros::NodeHandle("~/gsplines_moveit")) {
 
-    ROS_WARN_NAMED(LOGNAME, "wwweeeee++++");
     server_.setCallback([](ConfigType &_cfg, uint32_t level_) {
       (void)level_;
 
-      ROS_WARN("wwweeeee");
       _cfg.sobol_degree = 4;
     });
   }
+  ~Impl() {}
 };
 
 MinimumSobolevSeminormAdapter::~MinimumSobolevSeminormAdapter() = default;

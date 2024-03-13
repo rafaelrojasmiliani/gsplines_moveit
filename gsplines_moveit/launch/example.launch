@@ -11,7 +11,7 @@
          default="true"
          doc="Should a franka hand be mounted on the flange?" />
     <arg name="gsplines_adapter"
-         default="gsplines_moveit/MinimumJerkAdapter"
+         default="gsplines_moveit/MinimumSobolevSeminormAdapter"
          doc="Gsplines addapter" />
     <arg name="initial_joint_positions"
          doc="Initial joint configuration of the panda. Specify as a list of name/value pairs in form of '-J [name-of-joint] [value-in-rad]'. Default is a 90 degree bend in the elbow"

@@ -2,10 +2,19 @@ cmake_minimum_required(VERSION 3.0.2)
 project(gsplines_moveit)
 
 find_package(
-  catkin REQUIRED COMPONENTS gsplines_msgs gsplines_ros moveit_core
-                             moveit_ros_planning_interface roscpp rospy)
+  catkin REQUIRED
+  COMPONENTS gsplines_msgs
+             gsplines_ros
+             moveit_core
+             dynamic_reconfigure
+             moveit_ros_planning_interface
+             roscpp
+             rospy)
 
 find_package(Eigen3 REQUIRED)
+
+generate_dynamic_reconfigure_options(
+  "cfg/MinimumSobolevSeminormDynamicReconfigure.cfg")
 
 catkin_package(
   INCLUDE_DIRS
@@ -15,6 +24,7 @@ catkin_package(
   CATKIN_DEPENDS
   roscpp
   rospy
+  dynamic_reconfigure
   gsplines_ros
   gsplines_msgs)
 
