@@ -1,0 +1,88 @@
+<?xml version="1.0"?>
+<launch>
+    <env name="ROSCONSOLE_FORMAT"
+         value="[${severity}][${node}:${file}:${line}]: ${message}" />
+    <env name="ROSCONSOLE_CONFIG_FILE"
+         value="$(dirname)/../config/rosconsole.config" />
+    <arg name="arm_id"
+         default="panda"
+         doc="Name of the panda robot to spawn" />
+    <arg name="load_gripper"
+         default="true"
+         doc="Should a franka hand be mounted on the flange?" />
+    <arg name="gsplines_adapter"
+         default="gsplines_moveit/MinimumSobolevSeminormAdapter"
+         doc="Gsplines addapter" />
+    <arg name="transmission"
+         default="position" />
+    <!-- +++++++++++++++++++++++++++++++ -->
+    <!--   LOAD MOVEIT                   -->
+    <!-- +++++++++++++++++++++++++++++++ -->
+    <!-- load SRDF and joint_limits configuration -->
+    <include file="$(find panda_moveit_config)/launch/planning_context.launch">
+        <!-- Do not load the robot description -->
+        <arg name="load_robot_description"
+             value="false" />
+        <arg name="load_gripper"
+             value="$(arg load_gripper)" />
+        <arg name="arm_id"
+             value="$(arg arm_id)" />
+    </include>
+    <!-- +++++++++++++++++++++++++++++++ -->
+    <!--   Motion planning configuration -->
+    <!-- +++++++++++++++++++++++++++++++ -->
+    <!-- set the adapters  -->
+    <arg name="planning_adapters"
+         default="$(arg gsplines_adapter)
+                default_planner_request_adapters/FixWorkspaceBounds
+                default_planner_request_adapters/FixStartStateBounds
+                default_planner_request_adapters/FixStartStateCollision
+                default_planner_request_adapters/FixStartStatePathConstraints" />
+    <!--  Load the default ompl, but forward our planning_adapters -->
+    <group ns="move_group/planning_pipelines">
+        <include file="$(find panda_moveit_config)/launch/planning_pipeline.launch.xml"
+                 pass_all_args="true">
+            <arg name="pipeline"
+                 value="ompl" />
+        </include>
+        <!--  Set a default planner for our arm -->
+        <param name="ompl/$(arg arm_id)/default_planner_config"
+               value="RRTConnect" />
+    </group>
+    <!-- Trajectory Execution Functionality -->
+    <include ns="move_group"
+             file="$(find panda_moveit_config)/launch/trajectory_execution.launch.xml"
+             pass_all_args="true">
+        <arg name="moveit_manage_controllers"
+             value="true" />
+        <arg name="moveit_controller_manager"
+             value="simple" />
+    </include>
+    <!-- Sensors Functionality -->
+    <include ns="move_group"
+             file="$(find panda_moveit_config)/launch/sensor_manager.launch.xml">
+        <arg name="moveit_sensor_manager"
+             value="panda" />
+    </include>
+    <!-- Start the actual move_group node/action server -->
+    <node name="move_group"
+          pkg="moveit_ros_move_group"
+          type="move_group"
+          respawn="false"
+          output="screen">
+        <param name="allow_trajectory_execution"
+               value="true" />
+        <param name="default_planning_pipeline"
+               value="ompl" />
+        <param name="start_state_max_bounds_error"
+               value="0.1" />
+        <param name="planning_scene_monitor/publish_planning_scene"
+               value="true" />
+        <param name="planning_scene_monitor/publish_geometry_updates"
+               value="true" />
+        <param name="planning_scene_monitor/publish_state_updates"
+               value="true" />
+        <param name="planning_scene_monitor/publish_transforms_updates"
+               value="true" />
+    </node>
+</launch>

@@ -34,6 +34,8 @@ add_library(gsplines_moveit src/MinimumSobolevSeminormAdapter.cpp
 include_directories(${catkin_INCLUDE_DIRS} ${Eigen3_INCLUDE_DIRS} include/)
 target_link_libraries(gsplines_moveit ${catkin_LIBRARIES} ${Eigen3_LIBRARIES})
 
+add_dependencies(gsplines_moveit ${PROJECT_NAME}_gencfg)
+
 include_directories(${catkin_INCLUDE_DIRS} ${Eigen3_INCLUDE_DIRS})
 
 install(

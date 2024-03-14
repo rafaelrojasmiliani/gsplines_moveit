@@ -38,67 +38,14 @@
         <arg name="controller"
              default="$(arg controller)" />
     </include>
-    <!-- load URDF, SRDF and joint_limits configuration -->
-    <include file="$(find panda_moveit_config)/launch/planning_context.launch">
-        <arg name="load_robot_description"
-             value="false" />
-        <arg name="load_gripper"
-             value="$(arg load_gripper)" />
+    <!-- Load moveit -->
+    <include file="$(find gsplines_moveit)/launch/panda_moveit_config_example.launch">
+
         <arg name="arm_id"
-             value="$(arg arm_id)" />
+             default="$(arg arm_id)" />
+        <arg name="load_gripper"
+             default="$(arg load_gripper)" />
     </include>
-    <!-- OMPL + Our planner-->
-    <arg name="planning_adapters"
-         default="$(arg gsplines_adapter)
-                default_planner_request_adapters/FixWorkspaceBounds
-                default_planner_request_adapters/FixStartStateBounds
-                default_planner_request_adapters/FixStartStateCollision
-                default_planner_request_adapters/FixStartStatePathConstraints" />
-    <group ns="move_group/planning_pipelines">
-        <include file="$(find panda_moveit_config)/launch/planning_pipeline.launch.xml"
-                 pass_all_args="true">
-            <arg name="pipeline"
-                 value="ompl" />
-        </include>
-    </group>
-    <!-- Trajectory Execution Functionality -->
-    <arg name="transmission"
-         default="position" />
-    <include ns="move_group"
-             file="$(find panda_moveit_config)/launch/trajectory_execution.launch.xml"
-             pass_all_args="true">
-        <arg name="moveit_manage_controllers"
-             value="true" />
-        <arg name="moveit_controller_manager"
-             value="simple" />
-    </include>
-    <!-- Sensors Functionality -->
-    <include ns="move_group"
-             file="$(find panda_moveit_config)/launch/sensor_manager.launch.xml">
-        <arg name="moveit_sensor_manager"
-             value="panda" />
-    </include>
-    <!-- Start the actual move_group node/action server -->
-    <node name="move_group"
-          pkg="moveit_ros_move_group"
-          type="move_group"
-          respawn="false"
-          output="screen">
-        <param name="allow_trajectory_execution"
-               value="true" />
-        <param name="default_planning_pipeline"
-               value="ompl" />
-        <param name="start_state_max_bounds_error"
-               value="0.1" />
-        <param name="planning_scene_monitor/publish_planning_scene"
-               value="true" />
-        <param name="planning_scene_monitor/publish_geometry_updates"
-               value="true" />
-        <param name="planning_scene_monitor/publish_state_updates"
-               value="true" />
-        <param name="planning_scene_monitor/publish_transforms_updates"
-               value="true" />
-    </node>
     <!-- +++++++++++++++++++++++++++++++ -->
     <!-- launch rviz           -->
     <!-- +++++++++++++++++++++++++++++++ -->

@@ -5,6 +5,13 @@ namespace gsplines_moveit {
 class MinimumSobolevSeminormAdapter
     : public ::planning_request_adapter::PlanningRequestAdapter {
 public:
+  enum class ProblemType {
+    MinimumVelocity = 1,
+    MinimumAcceleration,
+    MinimumJerk,
+    Rojas,
+    Custom
+  };
   explicit MinimumSobolevSeminormAdapter();
   /// Interface
   bool adaptAndPlan(const PlannerFn &planner,
@@ -24,6 +31,7 @@ public:
 protected:
   class Impl;
   std::unique_ptr<Impl> m_impl;
+  ProblemType problem_type_;
 };
 
 } // namespace gsplines_moveit
