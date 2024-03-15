@@ -6,12 +6,13 @@ class MinimumSobolevSeminormAdapter
     : public ::planning_request_adapter::PlanningRequestAdapter {
 public:
   enum class ProblemType {
-    MinimumVelocity = 1,
+    MinimumVelocity = 0,
     MinimumAcceleration,
     MinimumJerk,
     Rojas,
     Custom
   };
+  static std::string problemTypeToString(const ProblemType &_type);
   explicit MinimumSobolevSeminormAdapter();
   /// Interface
   bool adaptAndPlan(const PlannerFn &planner,
