@@ -7,6 +7,7 @@ using namespace moveit::core;
 static const std::string LOGNAME("GSplinesControllerManager");
 
 namespace gsplines_moveit {
+
 bool FollowJointGSplineControllerHandle::sendTrajectory(
     const moveit_msgs::RobotTrajectory &trajectory) {
   ROS_DEBUG_STREAM_NAMED(LOGNAME, "new trajectory to " << name_);
@@ -19,14 +20,14 @@ bool FollowJointGSplineControllerHandle::sendTrajectory(
                    name_.c_str());
   }
 
-  if (done_)
+  if (done_) {
     ROS_DEBUG_STREAM_NAMED(LOGNAME, "sending trajectory to " << name_);
-  else
+  } else {
     ROS_DEBUG_STREAM_NAMED(
         LOGNAME,
         "sending continuation for the currently executed trajectory to "
             << name_);
-
+  }
   gsplines_msgs::FollowJointGSplineGoal goal;
 
   // goal.gsplines = trajectory.joint_trajectory;
