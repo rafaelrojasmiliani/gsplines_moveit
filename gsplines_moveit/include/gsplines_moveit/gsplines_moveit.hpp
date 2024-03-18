@@ -5,6 +5,7 @@
 #include <moveit/planning_interface/planning_response.h>
 #include <moveit/robot_trajectory/robot_trajectory.h>
 #include <moveit_msgs/RobotTrajectory.h>
+#include <optional>
 namespace gsplines_moveit {
 
 Eigen::MatrixXd
@@ -40,7 +41,8 @@ bool compute_minimum_sobolev_semi_norm_robot_trajectory(
         _weights,               //< optimization weights
     const ros::Duration &_step, //< time step between waypoints
     double _vel_factor = 1.0,   //< velocity scaling
-    double _acc_factor = 1.0    // < acceleration scaling
+    double _acc_factor = 1.0,   // < acceleration scaling
+    const std::optional<double> &_exec_time = std::nullopt //
 );
 
 bool compute_minimum_jerk_trajectory(robot_trajectory::RobotTrajectory &_trj,

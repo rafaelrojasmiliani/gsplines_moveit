@@ -8,6 +8,7 @@
 #include <gsplines_moveit/gsplines_moveit.hpp>
 #include <gsplines_ros/gsplines_ros.hpp>
 #include <moveit/robot_state/conversions.h>
+#include <optional>
 #include <rosconsole/macros_generated.h>
 
 namespace gsplines_moveit {
@@ -109,6 +110,7 @@ bool MinimumSobolevSeminormAdapter::adaptAndPlan(
 
   std::unique_ptr<gsplines::basis::Basis> basis;
   std::vector<std::pair<std::size_t, double>> weights;
+  std::optional<double> exec_time;
   if (result && res.trajectory_) {
 
     switch (m_impl->problem_type_) {
@@ -125,15 +127,15 @@ bool MinimumSobolevSeminormAdapter::adaptAndPlan(
       weights.emplace_back(std::make_pair(3, 1.0));
       break;
     case ProblemType::Rojas: {
-      ROS_ERROR("Not implemented %d", static_cast<int>(m_impl->problem_type_));
-      res.error_code_ = moveit::core::MoveItErrorCode::PLANNING_FAILED;
-      return false;
       basis = std::make_unique<gsplines::basis::BasisLegendre>(6);
       double k4 = std::pow(m_impl->k_, 4);
-      // execution_time = 4.0*float(N)/np.sqrt(2.0)
+      // execution_time =
       double alpha = k4 / (1.0 + k4);
+      basis = std::make_unique<gsplines::basis::Basis0101>(alpha);
       weights.emplace_back(std::make_pair(1, alpha));
       weights.emplace_back(std::make_pair(3, 1.0 - alpha));
+      exec_time =
+          4.0 * float(res.trajectory_->getWayPointCount() - 1) / std::sqrt(2.0);
       break;
       ;
     }
@@ -153,10 +155,13 @@ bool MinimumSobolevSeminormAdapter::adaptAndPlan(
     ROS_INFO_NAMED(LOGNAME, "Basis %s", basis->get_name().c_str());
     ROS_INFO_NAMED(LOGNAME, "Problem type %s",
                    problemTypeToString(m_impl->problem_type_).c_str());
+    ROS_INFO_NAMED(LOGNAME, "Number of waypoint: %zu",
+                   res.trajectory_->getWayPointCount());
 
     result = compute_minimum_sobolev_semi_norm_robot_trajectory(
         *res.trajectory_, *basis, weights, ros::Duration(0.01),
-        req.max_velocity_scaling_factor, req.max_acceleration_scaling_factor);
+        req.max_velocity_scaling_factor, req.max_acceleration_scaling_factor,
+        exec_time);
     ROS_INFO_NAMED(LOGNAME, "Optimization finished");
     return result;
   }

@@ -184,8 +184,8 @@ bool compute_minimum_sobolev_semi_norm_robot_trajectory(
     std::vector<std::pair<std::size_t, double>> _weights,
     const ros::Duration &_step, //< time step between waypoints
     double _vel_factor,         //< velocity scaling
-    double _acc_factor          // < acceleration scaling
-) {
+    double _acc_factor,         // < acceleration scaling
+    const std::optional<double> &_exec_time) {
   // 1. Get the robot model from the moveit's robot_trajectory
   const moveit::core::JointModelGroup *group = _trj.getGroup();
 
@@ -201,7 +201,7 @@ bool compute_minimum_sobolev_semi_norm_robot_trajectory(
   trajectory_msgs::JointTrajectory joint_trajectory =
       gsplines_ros::minimum_sobolev_semi_norm_joint_trajectory(
           waypoints, joint_names, _basis, _weights, bounds.velocity_bounds,
-          bounds.acceleration_bounds, _step);
+          bounds.acceleration_bounds, _step, _exec_time);
 
   // 5. Set pitüit from trajectory message
   // 5.1 copy the first state to have a reference.
