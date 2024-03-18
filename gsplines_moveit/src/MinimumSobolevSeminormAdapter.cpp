@@ -15,11 +15,8 @@ namespace gsplines_moveit {
 static const std::string LOGNAME = "minimum_sobolev_norm_adapter";
 class MinimumSobolevSeminormAdapter::Impl {
 public:
-  struct CustomParameters {
-
-    std::unique_ptr<gsplines::basis::Basis> basis_;
-    std::vector<std::pair<std::size_t, double>> weights;
-  };
+  std::unique_ptr<gsplines::basis::Basis> basis_;
+  std::vector<std::pair<std::size_t, double>> weights;
 
   ProblemType problem_type_;
 
@@ -37,56 +34,42 @@ public:
     });
   }
 
-  void set_parameters(ConfigType &_cfg, uint32_t _level) {
+  void set_parameters(ConfigType &_cfg, uint32_t /*level*/) {
 
-    // Parameter 1 changed
-    if (_level == 0) { // Check if bit 0 is set
-      switch (_cfg.OptimizationType) {
-      case 0:
-        this->problem_type_ = ProblemType::MinimumVelocity;
-        break;
-      case 1:
-        this->problem_type_ = ProblemType::MinimumAcceleration;
-        break;
-      case 2:
-        this->problem_type_ = ProblemType::MinimumJerk;
-        break;
-      case 3:
-        this->problem_type_ = ProblemType::Rojas;
-        break;
-      case 4:
-        this->problem_type_ = ProblemType::Custom;
-        break;
-      default:
-        throw std::runtime_error("Undefined OptimizationType");
-      }
+    switch (_cfg.OptimizationType) {
+    case 0:
+      this->problem_type_ = ProblemType::MinimumVelocity;
+      break;
+    case 1:
+      this->problem_type_ = ProblemType::MinimumAcceleration;
+      break;
+    case 2:
+      this->problem_type_ = ProblemType::MinimumJerk;
+      break;
+    case 3:
+      this->problem_type_ = ProblemType::Rojas;
+      break;
+    case 4:
+      this->problem_type_ = ProblemType::Custom;
+      break;
+    default:
+      throw std::runtime_error("Undefined OptimizationType");
     }
 
-    if (_level == 1) {
-      polynomial_degree_ = _cfg.PolynomialDegree;
-    }
+    polynomial_degree_ = _cfg.PolynomialDegree;
 
-    if (_level == 2) {
-      k_ = _cfg.kFactor;
-    }
+    k_ = _cfg.kFactor;
 
-    if (_level == 3) {
-      k_ = _cfg.weight1;
-    }
-    if (_level == 4) {
-      k_ = _cfg.weight2;
-    }
-    if (_level == 5) {
-      k_ = _cfg.weight3;
-    }
-    if (_level == 6) {
-      k_ = _cfg.weight4;
-    }
-    if (_level == 7) {
-      k_ = _cfg.weight5;
-    }
-    if (_level == 8) {
-      ROS_ERROR("set basis");
+    weights.clear();
+    weights.push_back(std::make_pair(1, _cfg.weight1));
+    weights.push_back(std::make_pair(2, _cfg.weight2));
+    weights.push_back(std::make_pair(3, _cfg.weight3));
+    weights.push_back(std::make_pair(4, _cfg.weight4));
+    weights.push_back(std::make_pair(5, _cfg.weight5));
+
+    if (_cfg.Basis == 0) {
+      basis_ =
+          std::make_unique<gsplines::basis::BasisLegendre>(polynomial_degree_);
     }
   }
   ~Impl() {}
@@ -122,10 +105,8 @@ bool MinimumSobolevSeminormAdapter::adaptAndPlan(
     planning_interface::MotionPlanResponse &res,
     std::vector<std::size_t> &) const {
 
-  ROS_ERROR("a");
   bool result = planner(planning_scene, req, res);
 
-  ROS_ERROR("b");
   std::unique_ptr<gsplines::basis::Basis> basis;
   std::vector<std::pair<std::size_t, double>> weights;
   if (result && res.trajectory_) {
@@ -144,6 +125,9 @@ bool MinimumSobolevSeminormAdapter::adaptAndPlan(
       weights.emplace_back(std::make_pair(3, 1.0));
       break;
     case ProblemType::Rojas: {
+      ROS_ERROR("Not implemented %d", static_cast<int>(m_impl->problem_type_));
+      res.error_code_ = moveit::core::MoveItErrorCode::PLANNING_FAILED;
+      return false;
       basis = std::make_unique<gsplines::basis::BasisLegendre>(6);
       double k4 = std::pow(m_impl->k_, 4);
       // execution_time = 4.0*float(N)/np.sqrt(2.0)
@@ -154,8 +138,9 @@ bool MinimumSobolevSeminormAdapter::adaptAndPlan(
       ;
     }
     case ProblemType::Custom:
-      ROS_ERROR("Not implemented %d", static_cast<int>(m_impl->problem_type_));
       res.error_code_ = moveit::core::MoveItErrorCode::PLANNING_FAILED;
+      basis = m_impl->basis_->clone();
+      weights = m_impl->weights;
       return false;
     default:
       ROS_ERROR("Unknow problem type %d",
