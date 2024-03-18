@@ -59,7 +59,7 @@ robot_trajectory::RobotTrajectory function_to_robot_trajectory(
 }
 
 Eigen::MatrixXd robot_trajectory_waypoints(moveit_msgs::RobotTrajectory &_msg) {
-  return gsplines_ros::waypoint_matrix(_msg.joint_trajectory);
+  return gsplines_ros::get_waypoints(_msg.joint_trajectory);
 }
 
 Eigen::MatrixXd
