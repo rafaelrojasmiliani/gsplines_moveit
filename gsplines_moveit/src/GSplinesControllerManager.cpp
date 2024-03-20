@@ -1,6 +1,7 @@
 
 
 #include <gsplines_moveit/GSplinesControllerHandler.hpp>
+#include <gsplines_msgs/GetBasis.h>
 #include <map>
 #include <moveit/utils/xmlrpc_casts.h>
 #include <moveit_simple_controller_manager/action_based_controller_handle.h>
@@ -18,11 +19,14 @@ class GSplinesControllerManager
     : public moveit_controller_manager::MoveItControllerManager {
 public:
   GSplinesControllerManager() : node_handle_("~") {
+
+    /// 0. try to get controller list
     if (!node_handle_.hasParam("controller_list")) {
       ROS_ERROR_STREAM_NAMED(LOGNAME, "No controller_list specified.");
       return;
     }
 
+    ///    0.1 load the controller_list
     XmlRpc::XmlRpcValue controller_list;
     node_handle_.getParam("controller_list", controller_list);
     if (!isArray(controller_list)) {
@@ -57,6 +61,7 @@ public:
 
         moveit_simple_controller_manager::ActionBasedControllerHandleBasePtr
             new_handle;
+
         if (type == "GripperCommand") {
           const double max_effort =
               controller_list[i].hasMember("max_effort")
@@ -142,7 +147,12 @@ public:
             "Caught unknown exception while parsing controller information");
       }
     }
+
+    get_basis_ = this->node_handle_.serviceClient<gsplines_msgs::GetBasis>(
+        "gsplines_moveit/get_basis");
   }
+
+  ros::ServiceClient get_basis_;
 
   ~GSplinesControllerManager() override = default;
 

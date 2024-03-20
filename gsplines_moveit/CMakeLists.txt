@@ -6,6 +6,7 @@ find_package(
   COMPONENTS gsplines_msgs
              gsplines_ros
              moveit_core
+             pluginlib
              dynamic_reconfigure
              moveit_ros_planning_interface
              roscpp

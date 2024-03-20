@@ -1,6 +1,9 @@
 
+#include <gsplines/Basis/Basis.hpp>
+#include <gsplines/GSpline.hpp>
 #include <gsplines_moveit/GSplinesControllerHandler.hpp>
 #include <gsplines_msgs/FollowJointGSplineAction.h>
+#include <gsplines_ros/gsplines_ros.hpp>
 #include <moveit/utils/xmlrpc_casts.h>
 
 using namespace moveit::core;
@@ -12,8 +15,9 @@ bool FollowJointGSplineControllerHandle::sendTrajectory(
     const moveit_msgs::RobotTrajectory &trajectory) {
   ROS_DEBUG_STREAM_NAMED(LOGNAME, "new trajectory to " << name_);
 
-  if (!controller_action_client_)
+  if (!controller_action_client_) {
     return false;
+  }
 
   if (!trajectory.multi_dof_joint_trajectory.points.empty()) {
     ROS_WARN_NAMED(LOGNAME, "%s cannot execute multi-dof trajectories.",
@@ -28,9 +32,19 @@ bool FollowJointGSplineControllerHandle::sendTrajectory(
         "sending continuation for the currently executed trajectory to "
             << name_);
   }
-  gsplines_msgs::FollowJointGSplineGoal goal;
+  gsplines_msgs::GetBasis getBasisCall;
+  get_basis_.call(getBasisCall);
 
-  // goal.gsplines = trajectory.joint_trajectory;
+  std::shared_ptr<gsplines::basis::Basis> basis =
+      gsplines_ros::basis_msg_to_basis(getBasisCall.response.basis);
+
+  auto gspline = gsplines_ros::interpolate_joint_trajectory(
+      trajectory.joint_trajectory, *basis);
+
+  gsplines_msgs::FollowJointGSplineGoal goal;
+  goal = goal_template_;
+  goal.gspline = gsplines_ros::gspline_to_joint_gspline_msg(
+      gspline, trajectory.joint_trajectory.joint_names);
   controller_action_client_->sendGoal(
       goal,
       [this](const auto &state, const auto &result) {

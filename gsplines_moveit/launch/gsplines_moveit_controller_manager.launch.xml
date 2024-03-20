@@ -1,0 +1,8 @@
+<launch>
+    <!-- Define the MoveIt controller manager plugin to use for trajectory execution -->
+    <param name="moveit_controller_manager"
+           value="gsplines_moveit/GSplinesControllerManager" />
+    <!-- Load controller list to the parameter server -->
+    <rosparam subst_value="true"
+              file="$(find gsplines_moveit)/config/gsplines_moveit_controllers.yaml" />
+</launch>

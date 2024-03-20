@@ -39,6 +39,7 @@
 
 #include <control_msgs/FollowJointTrajectoryAction.h>
 #include <gsplines_msgs/FollowJointGSplineAction.h>
+#include <gsplines_msgs/GetBasis.h>
 #include <moveit_simple_controller_manager/action_based_controller_handle.h>
 
 namespace gsplines_moveit {
@@ -49,6 +50,11 @@ class FollowJointGSplineControllerHandle
     : public moveit_simple_controller_manager::ActionBasedControllerHandle<
           gsplines_msgs::FollowJointGSplineAction> {
 public:
+  ros::NodeHandle node_handle_;
+  ros::ServiceClient get_basis_ =
+      node_handle_.serviceClient<gsplines_msgs::GetBasis>(
+          "gsplines_moveit/get_basis");
+
   FollowJointGSplineControllerHandle(const std::string &name,
                                      const std::string &action_ns)
       : moveit_simple_controller_manager::ActionBasedControllerHandle<

@@ -2,6 +2,7 @@
 #define GSPLINES_MOVEIT
 #include <eigen3/Eigen/Core>
 #include <gsplines/Basis/Basis.hpp>
+#include <gsplines/GSpline.hpp>
 #include <moveit/planning_interface/planning_response.h>
 #include <moveit/robot_trajectory/robot_trajectory.h>
 #include <moveit_msgs/RobotTrajectory.h>
@@ -49,5 +50,9 @@ bool compute_minimum_jerk_trajectory(robot_trajectory::RobotTrajectory &_trj,
                                      const ros::Duration &_step,
                                      double _vel_factor = 1.0,
                                      double _acc_factor = 1.0);
+
+gsplines::GSpline
+interpolate_robot_trajectory(const moveit_msgs::RobotTrajectory &_msg,
+                             const gsplines::basis::Basis &_basis);
 } // namespace gsplines_moveit
 #endif

@@ -239,4 +239,13 @@ bool compute_minimum_jerk_trajectory(robot_trajectory::RobotTrajectory &_trj,
 
   return true;
 }
+
+gsplines::GSpline
+interpolate_robot_trajectory(const moveit_msgs::RobotTrajectory &_msg,
+                             const gsplines::basis::Basis &_basis) {
+
+  return gsplines_ros::interpolate_joint_trajectory(_msg.joint_trajectory,
+                                                    _basis);
+}
+
 } // namespace gsplines_moveit
