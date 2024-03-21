@@ -3,7 +3,10 @@ project(gsplines_moveit)
 
 find_package(
   catkin REQUIRED
-  COMPONENTS gsplines_msgs
+  COMPONENTS actionlib
+             actionlib_msgs
+             control_msgs
+             gsplines_msgs
              gsplines_ros
              moveit_core
              pluginlib
@@ -23,6 +26,9 @@ catkin_package(
   LIBRARIES
   gsplines_moveit
   CATKIN_DEPENDS
+  actionlib
+  actionlib_msgs
+  control_msgs
   roscpp
   rospy
   dynamic_reconfigure

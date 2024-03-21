@@ -1,20 +1,22 @@
-
-
 #include <gsplines_moveit/GSplinesControllerHandler.hpp>
-#include <gsplines_msgs/GetBasis.h>
-#include <map>
+#include <memory>
+#include <moveit/controller_manager/controller_manager.h>
 #include <moveit/utils/xmlrpc_casts.h>
 #include <moveit_simple_controller_manager/action_based_controller_handle.h>
-#include <moveit_simple_controller_manager/follow_joint_trajectory_controller_handle.h>
 #include <moveit_simple_controller_manager/gripper_controller_handle.h>
 #include <pluginlib/class_list_macros.hpp>
-#include <ros/ros.h>
-
-using namespace moveit::core;
+#include <ros/console.h>
+#include <ros/node_handle.h>
+#include <string>
+#include <vector>
+#include <xmlrpcpp/XmlRpc.h>
+#include <xmlrpcpp/XmlRpcValue.h>
 
 const std::string LOGNAME("GSplinesControllerManager");
 
 namespace gsplines_moveit {
+
+/// Moveit controller manager that exposes a gspline control action handler
 class GSplinesControllerManager
     : public moveit_controller_manager::MoveItControllerManager {
 public:
@@ -29,8 +31,8 @@ public:
     ///    0.1 load the controller_list
     XmlRpc::XmlRpcValue controller_list;
     node_handle_.getParam("controller_list", controller_list);
-    if (!isArray(controller_list)) {
-      ROS_ERROR_NAMED(
+    if (!moveit::core::isArray(controller_list)) {
+      ROS_ERROR_STREAM_NAMED(
           LOGNAME, "Parameter controller_list should be specified as an array");
       return;
     }
@@ -39,8 +41,8 @@ public:
     for (int i = 0; i < controller_list.size();
          ++i) // NOLINT(modernize-loop-convert)
     {
-      if (!isStruct(controller_list[i],
-                    {"name", "joints", "action_ns", "type"})) {
+      if (!moveit::core::isStruct(controller_list[i],
+                                  {"name", "joints", "action_ns", "type"})) {
         ROS_ERROR_STREAM_NAMED(LOGNAME, "name, joints, action_ns, and type "
                                         "must be specifed for each controller");
         continue;
@@ -52,7 +54,7 @@ public:
             std::string(controller_list[i]["action_ns"]);
         const std::string type = std::string(controller_list[i]["type"]);
 
-        if (!isArray(controller_list[i]["joints"])) {
+        if (!moveit::core::isArray(controller_list[i]["joints"])) {
           ROS_ERROR_STREAM_NAMED(
               LOGNAME, "The list of joints for controller "
                            << name << " is not specified as an array");
@@ -71,7 +73,7 @@ public:
           new_handle = std::make_shared<
               moveit_simple_controller_manager::GripperControllerHandle>(
               name, action_ns, max_effort);
-          if (static_cast<
+          if (dynamic_cast<
                   moveit_simple_controller_manager::GripperControllerHandle *>(
                   new_handle.get())
                   ->isConnected()) {
@@ -81,24 +83,25 @@ public:
                     LOGNAME, "Parallel Gripper requires exactly two joints");
                 continue;
               }
-              static_cast<
+              dynamic_cast<
                   moveit_simple_controller_manager::GripperControllerHandle *>(
                   new_handle.get())
                   ->setParallelJawGripper(controller_list[i]["joints"][0],
                                           controller_list[i]["joints"][1]);
             } else {
-              if (controller_list[i].hasMember("command_joint"))
-                static_cast<moveit_simple_controller_manager::
-                                GripperControllerHandle *>(new_handle.get())
+              if (controller_list[i].hasMember("command_joint")) {
+                dynamic_cast<moveit_simple_controller_manager::
+                                 GripperControllerHandle *>(new_handle.get())
                     ->setCommandJoint(controller_list[i]["command_joint"]);
-              else
-                static_cast<moveit_simple_controller_manager::
-                                GripperControllerHandle *>(new_handle.get())
+              } else {
+                dynamic_cast<moveit_simple_controller_manager::
+                                 GripperControllerHandle *>(new_handle.get())
                     ->setCommandJoint(controller_list[i]["joints"][0]);
+              }
             }
 
             if (controller_list[i].hasMember("allow_failure")) {
-              static_cast<
+              dynamic_cast<
                   moveit_simple_controller_manager::GripperControllerHandle *>(
                   new_handle.get())
                   ->allowFailure(true);
@@ -109,7 +112,8 @@ public:
             controllers_[name] = new_handle;
           }
         } else if (type == "FollowJointGSpline") {
-          auto h = new FollowJointGSplineControllerHandle(name, action_ns);
+          auto *h =                                                    // NOLINT
+              new FollowJointGSplineControllerHandle(name, action_ns); // NOLINT
           new_handle.reset(h);
           if (h->isConnected()) {
             ROS_INFO_STREAM_NAMED(
@@ -147,12 +151,7 @@ public:
             "Caught unknown exception while parsing controller information");
       }
     }
-
-    get_basis_ = this->node_handle_.serviceClient<gsplines_msgs::GetBasis>(
-        "gsplines_moveit/get_basis");
   }
-
-  ros::ServiceClient get_basis_;
 
   ~GSplinesControllerManager() override = default;
 
@@ -162,13 +161,13 @@ public:
    */
   moveit_controller_manager::MoveItControllerHandlePtr
   getControllerHandle(const std::string &name) override {
+    ROS_FATAL_STREAM_NAMED(LOGNAME, "gettin handler!!: " << name);
     const auto it = controllers_.find(name);
     if (it != controllers_.end()) {
       return it->second;
-    } else {
-      ROS_FATAL_STREAM_NAMED(LOGNAME, "No such controller: " << name);
     }
-    return moveit_controller_manager::MoveItControllerHandlePtr();
+    ROS_FATAL_STREAM_NAMED(LOGNAME, "No such controller: " << name);
+    return {};
   }
 
   /*
@@ -203,10 +202,7 @@ public:
    */
   void getControllerJoints(const std::string &name,
                            std::vector<std::string> &joints) override {
-    std::map<std::string,
-             moveit_simple_controller_manager::
-                 ActionBasedControllerHandleBasePtr>::const_iterator it =
-        controllers_.find(name);
+    auto it = controllers_.find(name);
     if (it != controllers_.end()) {
       it->second->getJoints(joints);
     } else {

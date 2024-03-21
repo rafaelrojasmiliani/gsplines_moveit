@@ -31,6 +31,9 @@
     <exec_depend>moveit_ros_planning_interface</exec_depend>
     <exec_depend>roscpp</exec_depend>
     <depend>rospy</depend>
+    <depend>actionlib</depend>
+    <depend>actionlib_msgs</depend>
+    <depend>control_msgs</depend>
     <depend>dynamic_reconfigure</depend>
     <!-- The export tag contains other, unspecified, tags -->
     <export>

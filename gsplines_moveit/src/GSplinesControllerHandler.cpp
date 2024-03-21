@@ -1,13 +1,24 @@
 
 #include <gsplines/Basis/Basis.hpp>
 #include <gsplines/GSpline.hpp>
+
 #include <gsplines_moveit/GSplinesControllerHandler.hpp>
-#include <gsplines_msgs/FollowJointGSplineAction.h>
+
+#include <gsplines_msgs/FollowJointGSplineActionFeedback.h>
+#include <gsplines_msgs/FollowJointGSplineActionGoal.h>
+#include <gsplines_msgs/FollowJointGSplineActionResult.h>
+#include <gsplines_msgs/GetBasis.h>
+
+#include <ros/console.h>
+
 #include <gsplines_ros/gsplines_ros.hpp>
+
 #include <moveit/utils/xmlrpc_casts.h>
 
-using namespace moveit::core;
-static const std::string LOGNAME("GSplinesControllerManager");
+#include <moveit_msgs/RobotTrajectory.h>
+#include <string>
+
+static const std::string LOGNAME("GSplinesControllerHandler");
 
 namespace gsplines_moveit {
 
@@ -20,21 +31,34 @@ bool FollowJointGSplineControllerHandle::sendTrajectory(
   }
 
   if (!trajectory.multi_dof_joint_trajectory.points.empty()) {
-    ROS_WARN_NAMED(LOGNAME, "%s cannot execute multi-dof trajectories.",
-                   name_.c_str());
+    ROS_WARN_STREAM_NAMED(LOGNAME,                                    // NOLINT
+                          "%s cannot execute multi-dof trajectories." // NOLINT
+                              << name_);                              // NOLINT
   }
 
   if (done_) {
-    ROS_DEBUG_STREAM_NAMED(LOGNAME, "sending trajectory to " << name_);
+    ROS_DEBUG_STREAM_NAMED(LOGNAME,                            // NOLINT
+                           "sending trajectory to " << name_); // NOLINT
   } else {
-    ROS_DEBUG_STREAM_NAMED(
-        LOGNAME,
-        "sending continuation for the currently executed trajectory to "
-            << name_);
+    ROS_DEBUG_STREAM_NAMED( // NOLINT
+        LOGNAME,            // NOLINT
+        "sending continuation for the currently executed trajectory to " // NOLINT
+            << name_); // NOLINT
   }
   gsplines_msgs::GetBasis getBasisCall;
-  get_basis_.call(getBasisCall);
+  if (!get_basis_.exists()) {
+    ROS_DEBUG_STREAM_NAMED(LOGNAME,
+                           "get basis service does not exists"); // NOLINT
+    return false;
+  }
+  if (!get_basis_.call(getBasisCall)) {
+    ROS_DEBUG_STREAM_NAMED(LOGNAME, "could not retrieve basis"); // NOLINT
+    return false;
+  }
 
+  ROS_INFO_STREAM_NAMED( // NOLINT
+      LOGNAME, "sending continuation for the currently executed trajectory to "
+                   << name_);
   std::shared_ptr<gsplines::basis::Basis> basis =
       gsplines_ros::basis_msg_to_basis(getBasisCall.response.basis);
 
@@ -60,15 +84,18 @@ bool FollowJointGSplineControllerHandle::sendTrajectory(
 void FollowJointGSplineControllerHandle::configure(
     XmlRpc::XmlRpcValue &config) {
   /// Get parameters from the parameter server and set them into goal_template_.
-  if (config.hasMember("path_tolerance"))
+  if (config.hasMember("path_tolerance")) {
     configure(config["path_tolerance"], "path_tolerance",
               goal_template_.path_tolerance);
-  if (config.hasMember("goal_tolerance"))
+  }
+  if (config.hasMember("goal_tolerance")) {
     configure(config["goal_tolerance"], "goal_tolerance",
               goal_template_.goal_tolerance);
-  if (config.hasMember("goal_time_tolerance"))
+  }
+  if (config.hasMember("goal_time_tolerance")) {
     goal_template_.goal_time_tolerance =
-        ros::Duration(parseDouble(config["goal_time_tolerance"]));
+        ros::Duration(moveit::core::parseDouble(config["goal_time_tolerance"]));
+  }
 }
 
 namespace {
@@ -121,25 +148,26 @@ const char *errorCodeToMessage(int error_code) {
 void FollowJointGSplineControllerHandle::configure(
     XmlRpc::XmlRpcValue &config, const std::string &config_name,
     std::vector<control_msgs::JointTolerance> &tolerances) {
-  if (isStruct(config)) // config should be either a struct of position,
-                        // velocity, acceleration
+  if (moveit::core::isStruct(config)) // config should be either a struct of
+                                      // position, velocity, acceleration
   {
     for (ToleranceVariables var : {POSITION, VELOCITY, ACCELERATION}) {
       if (!config.hasMember(VAR_NAME[var]))
         continue;
       XmlRpc::XmlRpcValue values = config[VAR_NAME[var]];
-      if (isArray(values, joints_.size())) {
+      if (moveit::core::isArray(values, joints_.size())) {
         size_t i = 0;
         for (const auto &joint_name : joints_)
           VAR_ACCESS[var](getTolerance(tolerances, joint_name)) =
-              parseDouble(values[i++]);
+              moveit::core::parseDouble(values[i++]);
       } else { // use common value for all joints
-        double value = parseDouble(values);
+        double value = moveit::core::parseDouble(values);
         for (const auto &joint_name : joints_)
           VAR_ACCESS[var](getTolerance(tolerances, joint_name)) = value;
       }
     }
-  } else if (isArray(config)) // or an array of JointTolerance msgs
+  } else if (moveit::core::isArray(
+                 config)) // or an array of JointTolerance msgs
   {
     for (int i = 0; i < config.size(); ++i) // NOLINT(modernize-loop-convert)
     {
@@ -148,7 +176,8 @@ void FollowJointGSplineControllerHandle::configure(
       for (ToleranceVariables var : {POSITION, VELOCITY, ACCELERATION}) {
         if (!config[i].hasMember(VAR_NAME[var]))
           continue;
-        VAR_ACCESS[var](tol) = parseDouble(config[i][VAR_NAME[var]]);
+        VAR_ACCESS[var](tol) =
+            moveit::core::parseDouble(config[i][VAR_NAME[var]]);
       }
     }
   } else

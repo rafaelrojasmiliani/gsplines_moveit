@@ -1,5 +1,5 @@
 controller_list:
-  - name: $(arg transmission)_joint_gspline_controller
+  - name: $(arg transmission)_joint_trajectory_controller
     action_ns: follow_joint_gspline
     type: FollowJointGSpline
     default: True
