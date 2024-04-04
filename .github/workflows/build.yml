@@ -10,7 +10,7 @@ jobs:
       matrix:
         docker_image:
           - image_name: "rafa606/gsplines-moveit-vim:noetic"
-            base_image: "rafa606/ros-vim:noetic"
+            base_image: "rafa606/moveit-vim:noetic"
             ros_distro: "noetic"
     steps:
       - name: checkout code
