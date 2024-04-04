@@ -9,7 +9,6 @@ RUN --mount=type=bind,source=./,target=/workspace/src,rw \
     && export PATH=/opt/openrobots/bin:$PATH \
     && export PKG_CONFIG_PATH=/opt/openrobots/lib/pkgconfig:$PKG_CONFIG_PATH \
     && export LD_LIBRARY_PATH=/opt/openrobots/lib:$LD_LIBRARY_PATH \
-    && export PYTHONPATH=/opt/openrobots/lib/python3.10/site-packages:$PYTHONPATH # Adapt your desired python version here \
     && export CMAKE_PREFIX_PATH=/opt/openrobots:$CMAKE_PREFIX_PATH \
     && wget https://github.com/rafaelrojasmiliani/gsplines_cpp/releases/download/master/gsplines-0.0.1-gcc-11-amd64.deb \
     && wget https://github.com/rafaelrojasmiliani/opstop_cpp/releases/download/master/opstop-0.0.1-gcc-11-amd64.deb \
