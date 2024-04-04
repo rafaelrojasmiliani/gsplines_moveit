@@ -161,7 +161,6 @@ public:
    */
   moveit_controller_manager::MoveItControllerHandlePtr
   getControllerHandle(const std::string &name) override {
-    ROS_FATAL_STREAM_NAMED(LOGNAME, "gettin handler!!: " << name);
     const auto it = controllers_.find(name);
     if (it != controllers_.end()) {
       return it->second;
