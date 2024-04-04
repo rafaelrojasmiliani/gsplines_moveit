@@ -1,0 +1,84 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- +++++++++++++ -->
+    <!--  This launch file launches moveit with the gspline controller and -->
+    <!--  adapter. Then it launches the repeater.-->
+    <!-- +++++++++++++ -->
+    <arg name="arm_id"
+         default="panda"
+         doc="Name of the panda robot to spawn" />
+    <arg name="load_gripper"
+         default="true"
+         doc="Should a franka hand be mounted on the flange?" />
+    <arg name="gsplines_adapter"
+         default="gsplines_moveit/MinimumSobolevSeminormAdapter"
+         doc="Gsplines addapter" />
+    <arg name="control_name"
+         default="position_joint_trajectory_controller"
+         doc="namespace where the control action is exposed" />
+    <arg name="transmission"
+         default="position" />
+    <arg name="fjta_name"
+         default="follow_joint_trajectory"
+         doc="name of the follow joint trajectory action" />
+    <arg name="fjga_name"
+         default="follow_joint_gspline"
+         doc="Name og the FollowJointTrajectoryGSplineAction" />
+    <arg name="control_step"
+         default="0.005"
+         doc="time step of trajectory of the follow joint trajectory message" />
+    <arg name="optimization_window_milliseconds"
+         default="500"
+         doc="Time reserved to the optimization process in milliseconds" />
+    <arg name="network_window_milliseconds"
+         default="50"
+         doc="Time reserved to the network delays, ros protocol handshake, etc" />
+    <arg name="alpha"
+         default="2.0"
+         doc="Total percentage of the maximum kpi increase allowed during stop. E, e.g. 1.6 times the maximum acceleration achieved by the original trajectory" />
+    <arg name="smoothness_measure"
+         default="acceleration_max"
+         doc="Type of smoothness measure used in the optimization" />
+    <arg name="nglp"
+         default="4"
+         doc="Number of Gauss-Lobatto points used to approximate the solution" />
+    <!-- +++++++++++++ -->
+    <!-- Launch moveit -->
+    <!-- +++++++++++++ -->
+    <include file="$(find gsplines_moveit)/launch/panda_moveit_config_gspline_control_example.launch">
+
+        <arg name="arm_id"
+             default="$(arg arm_id)" />
+        <arg name="load_gripper"
+             default="$(arg load_gripper)" />
+        <arg name="gsplines_adapter"
+             default="$(arg gsplines_adapter)" />
+        <arg name="transmission"
+             default="$(arg transmission)" />
+    </include>
+    <!-- +++++++++++++   -->
+    <!-- Launch repeater -->
+    <!-- +++++++++++++   -->
+    <node name="wrapper"
+          pkg="opstop_ros"
+          type="follow_joint_trajectory_wrapper"
+          respawn="false"
+          output="screen">
+        <param name="action_name"
+               value="$(arg fjga_name)" />
+        <param name="target_action_ns"
+               value="$(arg control_name)" />
+        <param name="control_step"
+               value="$(arg control_step)" />
+        <param name="optimization_window_milliseconds"
+               value="$(arg optimization_window_milliseconds)" />
+        <param name="network_window_milliseconds"
+               value="$(arg network_window_milliseconds)" />
+        <param name="alpha"
+               value="$(arg alpha)" />
+        <param name="nglp"
+               value="$(arg nglp)" />
+        <param name="smoothness_measure"
+               value="$(arg smoothness_measure)" />
+    </node>
+</launch>
