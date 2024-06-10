@@ -49,6 +49,17 @@ struct _boundVector {
   std::vector<double> velocity_bounds;
 };
 
+std::string vectorToString(const std::vector<double> &v) {
+  std::array<char, 20> buff = {0};
+  std::ostringstream oss;
+  for (const auto &val : v) {
+    std::snprintf(buff.data(), 20, //
+                  "%05.2fl", val);
+    oss << buff.data() << " ";
+  }
+  return oss.str();
+}
+
 _boundVector _getBounds(const moveit::core::JointModelGroup &group,
                         double _vel_factor = 1.0, double _acc_factor = 1.0) {
   const auto &joint_names = group.getVariableNames();
@@ -62,7 +73,7 @@ _boundVector _getBounds(const moveit::core::JointModelGroup &group,
     if (bounds.velocity_bounded_) {
       const double max_v = std::max(std::abs(bounds.max_velocity_),
                                     std::abs(bounds.min_velocity_));
-      velocity_bounds.push_back(max_v);
+      velocity_bounds.push_back(max_v * _vel_factor);
     } else {
       velocity_bounds.push_back(_vel_factor);
     }
@@ -71,7 +82,7 @@ _boundVector _getBounds(const moveit::core::JointModelGroup &group,
     if (bounds.acceleration_bounded_) {
       const double max_v = std::max(std::abs(bounds.max_acceleration_),
                                     std::abs(bounds.min_acceleration_));
-      acceleration_bounds.push_back(max_v);
+      acceleration_bounds.push_back(max_v * _acc_factor);
     } else {
       acceleration_bounds.push_back(_acc_factor);
     }
@@ -243,10 +254,20 @@ bool MinimumSobolevSeminormAdapter::adaptAndPlan(
             static_cast<int>(res.trajectory_->getWayPointCount())));
     ROS_INFO_STREAM_NAMED(LOGNAME, "Optimization finished"); // NOLINT
 
+    ROS_INFO_STREAM_NAMED(LOGNAME,
+                          "Scaling trajectory: \n"
+                          "  Velocity scalling factor = "
+                              << req.max_acceleration_scaling_factor
+                              << "\n Acceleration scaling factor "
+                              << req.max_acceleration_scaling_factor); // NOLINT
     auto bounds = _getBounds(*res.trajectory_->getGroup(),
                              req.max_velocity_scaling_factor,
                              req.max_acceleration_scaling_factor);
-    ROS_INFO_STREAM_NAMED(LOGNAME, "Scaling trajectory"); // NOLINT
+    ROS_INFO_STREAM_NAMED(
+        LOGNAME, "Scaling trajectory: \n      velocity bounds "
+                     << vectorToString(bounds.velocity_bounds)
+                     << "\n     acceleration bounds "
+                     << vectorToString(bounds.acceleration_bounds)); // NOLINT
     auto trj2 =
         trj.linear_scaling_new_execution_time_max_velocity_max_acceleration(
             bounds.velocity_bounds, bounds.acceleration_bounds, 0.01);
