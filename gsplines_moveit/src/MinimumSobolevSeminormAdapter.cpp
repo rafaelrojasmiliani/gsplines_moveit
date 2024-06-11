@@ -53,7 +53,7 @@ std::string vectorToString(const std::vector<double> &v) {
   std::array<char, 20> buff = {0};
   std::ostringstream oss;
   for (const auto &val : v) {
-    std::snprintf(buff.data(), 20, //
+    std::snprintf(buff.data(), 20, // NOLINT
                   "%05.2fl", val);
     oss << buff.data() << " ";
   }
@@ -166,6 +166,7 @@ public:
       exec_time = [](int wpn) -> double { return wpn - 1; };
       break;
     case 3: {
+      this->problem_type_ = ProblemType::Rojas;
       k_ = _cfg.kFactor;
       const double k4 = std::pow(k_, 4);
       // execution_time =
@@ -248,10 +249,12 @@ bool MinimumSobolevSeminormAdapter::adaptAndPlan(
     const Eigen::MatrixXd waypoints =
         robot_trajectory_waypoints(*res.trajectory_);
 
+    /// Optimization is here
     const gsplines::GSpline trj = gsplines::optimization::optimal_sobolev_norm(
         waypoints, *m_impl->basis, m_impl->weights,
         m_impl->exec_time(
             static_cast<int>(res.trajectory_->getWayPointCount())));
+
     ROS_INFO_STREAM_NAMED(LOGNAME, "Optimization finished"); // NOLINT
 
     ROS_INFO_STREAM_NAMED(LOGNAME,
