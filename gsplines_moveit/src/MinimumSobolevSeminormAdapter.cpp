@@ -191,6 +191,46 @@ public:
     default:
       throw std::runtime_error("Undefined OptimizationType");
     }
+
+    gsplines::optimization::IpoptSolverOptions::set_option("linear_solver",
+                                                           _cfg.linear_solver);
+    gsplines::optimization::IpoptSolverOptions::set_option(
+        "jacobian_approximation", _cfg.jacobian_approximation);
+
+    gsplines::optimization::IpoptSolverOptions::set_option(
+        "fast_step_computation", _cfg.fast_step_computation);
+
+    gsplines::optimization::IpoptSolverOptions::set_option(
+        "derivative_test", _cfg.derivative_test);
+
+    gsplines::optimization::IpoptSolverOptions::set_option(
+        "hessian_approximation", _cfg.hessian_approximation);
+
+    gsplines::optimization::IpoptSolverOptions::set_option("jac_c_constant",
+                                                           _cfg.jac_c_constant);
+
+    gsplines::optimization::IpoptSolverOptions::set_option(
+        "print_timing_statistics", _cfg.print_timing_statistics);
+
+    gsplines::optimization::IpoptSolverOptions::set_option(
+        "dependency_detector", _cfg.dependency_detector);
+
+    gsplines::optimization::IpoptSolverOptions::set_option(
+        "dependency_detection_with_rhs", _cfg.dependency_detection_with_rhs);
+
+    gsplines::optimization::IpoptSolverOptions::set_option("tol", _cfg.tol);
+
+    gsplines::optimization::IpoptSolverOptions::set_option("dual_inf_tol",
+                                                           _cfg.dual_inf_tol);
+
+    gsplines::optimization::IpoptSolverOptions::set_option(
+        "constr_viol_tol", _cfg.constr_viol_tol);
+
+    gsplines::optimization::IpoptSolverOptions::set_option("compl_inf_tol",
+                                                           _cfg.compl_inf_tol);
+
+    gsplines::optimization::IpoptSolverOptions::set_option("print_level",
+                                                           _cfg.print_level);
   }
 };
 
