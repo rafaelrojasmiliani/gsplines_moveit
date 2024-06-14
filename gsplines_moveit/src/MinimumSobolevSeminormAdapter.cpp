@@ -14,6 +14,7 @@
 #include <gsplines_moveit/gsplines_moveit.hpp>
 
 #include <gsplines_msgs/GetBasis.h>
+#include <gsplines_msgs/JointGSpline.h>
 
 #include <gsplines_ros/gsplines_ros.hpp>
 
@@ -112,6 +113,8 @@ public:
   dynamic_reconfigure::Server<ConfigType> server_;
 
   ros::ServiceServer get_basis_server_;
+  ros::Publisher gspline_publisher_;
+
   ros::NodeHandle nh_prv_{"~"};
 
   Impl() : server_(ros::NodeHandle("~/gsplines_moveit")) {
@@ -123,6 +126,9 @@ public:
     get_basis_server_ = nh_prv_.advertiseService(
         "gsplines_moveit/get_basis",
         &MinimumSobolevSeminormAdapter::Impl::get_basis, this);
+
+    gspline_publisher_ = nh_prv_.advertise<gsplines_msgs::JointGSpline>(
+        "gsplines_moveit/planned_gspline", 1000);
   }
 
   bool get_basis(typename GetBasisSrv::Request &req, // NOLINT
@@ -336,6 +342,10 @@ bool MinimumSobolevSeminormAdapter::adaptAndPlan(
           trj2, res.trajectory_->getGroup()->getVariableNames(),
           ros::Duration(0.01));
     }
+    m_impl->gspline_publisher_.publish(
+        gsplines_ros::gspline_to_joint_gspline_msg(
+            trj2, res.trajectory_->getGroup()->getVariableNames()));
+
     if ((trj_msg.header.stamp + trj_msg.points.back().time_from_start)
             .isZero()) {
       ROS_ERROR_STREAM_NAMED(LOGNAME, "Zero time trj"); // NOLINT
