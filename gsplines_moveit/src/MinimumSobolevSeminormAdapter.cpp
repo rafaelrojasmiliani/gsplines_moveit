@@ -61,6 +61,18 @@ std::string vectorToString(const std::vector<double> &v) {
   return oss.str();
 }
 
+std::string
+weightsToString(const std::vector<std::pair<std::size_t, double>> &v) {
+  std::array<char, 50> buff = {0};
+  buff[0] = '\n';
+  std::ostringstream oss;
+  for (const auto &val : v) {
+    std::snprintf(buff.data(), 50, // NOLINT
+                  "(%02zu %05.2fl)\n", val.first, val.second);
+    oss << buff.data();
+  }
+  return oss.str();
+}
 _boundVector _getBounds(const moveit::core::JointModelGroup &group,
                         double _vel_factor = 1.0, double _acc_factor = 1.0) {
   const auto &joint_names = group.getVariableNames();
@@ -187,7 +199,6 @@ public:
     }
     case 4:
       this->problem_type_ = ProblemType::Custom;
-      weights.clear();
       weights.emplace_back(1, _cfg.weight1);
       weights.emplace_back(2, _cfg.weight2);
       weights.emplace_back(3, _cfg.weight3);
@@ -274,6 +285,8 @@ bool MinimumSobolevSeminormAdapter::adaptAndPlan(
   const bool result = planner(planning_scene, req, res);
 
   if (result && res.trajectory_) {
+    const Eigen::MatrixXd waypoints =
+        robot_trajectory_waypoints(*res.trajectory_);
 
     ROS_INFO_STREAM_NAMED(LOGNAME, "Starting optimization");         // NOLINT
     ROS_INFO_STREAM_NAMED(LOGNAME,                                   // NOLINT
@@ -282,8 +295,15 @@ bool MinimumSobolevSeminormAdapter::adaptAndPlan(
         LOGNAME, "Problem type "                                     // NOLINT
                      << problemTypeToString(m_impl->problem_type_)); // NOLINT
     ROS_INFO_STREAM_NAMED(                                           // NOLINT
+        LOGNAME, "Weights\n"                                         // NOLINT
+                     << weightsToString(m_impl->weights));           // NOLINT
+    ROS_INFO_STREAM_NAMED(                                           // NOLINT
         LOGNAME, "Number of waypoint: "                              // NOLINT
                      << res.trajectory_->getWayPointCount());        // NOLINT
+    Eigen::IOFormat OctaveFmt(6, 0, ", ", ",\n", "[", "]", "[", "]");
+    ROS_INFO_STREAM_NAMED(                            // NOLINT
+        LOGNAME, "Waypoints: \n"                      // NOLINT
+                     << waypoints.format(OctaveFmt)); // NOLINT
 
     ///--------------------
     // result = compute_minimum_sobolev_semi_norm_robot_trajectory(
@@ -291,9 +311,6 @@ bool MinimumSobolevSeminormAdapter::adaptAndPlan(
     //     ros::Duration(0.01), req.max_velocity_scaling_factor,
     //     req.max_acceleration_scaling_factor,
     //     m_impl->exec_time(res.trajectory_->getWayPointCount()));
-
-    const Eigen::MatrixXd waypoints =
-        robot_trajectory_waypoints(*res.trajectory_);
 
     /// Optimization is here
     const gsplines::GSpline trj = gsplines::optimization::optimal_sobolev_norm(
