@@ -187,7 +187,6 @@ public:
       this->problem_type_ = ProblemType::Rojas;
       k_ = _cfg.kFactor;
       const double k4 = std::pow(k_, 4);
-      // execution_time =
       const double alpha = k4 / (1.0 + k4);
       basis = std::make_unique<gsplines::basis::Basis0101>(alpha);
       weights.emplace_back(1, alpha);
@@ -334,14 +333,30 @@ bool MinimumSobolevSeminormAdapter::adaptAndPlan(
                      << vectorToString(bounds.velocity_bounds)
                      << "\n     acceleration bounds "
                      << vectorToString(bounds.acceleration_bounds)); // NOLINT
-    auto trj2 =
-        trj.linear_scaling_new_execution_time_max_velocity_max_acceleration(
-            bounds.velocity_bounds, bounds.acceleration_bounds, 0.01);
-    ROS_INFO_STREAM_NAMED(LOGNAME, "Scaling trajectory: ok"); // NOLINT
+
+    /// Apply trajectory scaling
+    auto trj2 = [&]() {
+      auto trj_1 =
+          trj.linear_scaling_new_execution_time_max_velocity_max_acceleration(
+              bounds.velocity_bounds, bounds.acceleration_bounds, 0.01);
+
+      double max_group_frame_speed = get_max_frame_speed(
+          trj_1, res.trajectory_->getGroup(), res.trajectory_->getRobotModel());
+      ROS_INFO_STREAM_NAMED(LOGNAME, "The maximum velocity of the frames is "
+                                         << max_group_frame_speed); // NOLINT
+      if (max_group_frame_speed < 0.3) {
+        return trj_1;
+      }
+      double t0 = trj_1.get_domain_length();
+      return trj_1.linear_scaling_new_execution_time(
+          t0 * max_group_frame_speed / 0.3);
+    }();
+    ROS_INFO_STREAM_NAMED(LOGNAME, "Scaling trajectory: ok, execution time is "
+                                       << trj2.get_domain_length()); // NOLINT
 
     // workarround to handle basis0101, which change when time-scaled.
     m_impl->basis = trj2.get_basis().clone();
-
+    ///
     std::string s;
     trajectory_msgs::JointTrajectory trj_msg;
     if (m_impl->nh_prv_.hasParam("moveit_controller_manager") &&
