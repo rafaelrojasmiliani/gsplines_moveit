@@ -1,4 +1,5 @@
 #include <gsplines/Basis/BasisLegendre.hpp>
+#include <gsplines/Collocation/GaussLobattoLagrange.hpp>
 #include <gsplines/Optimization/ipopt_solver.hpp>
 #include <gsplines_moveit/gsplines_moveit.hpp>
 #include <gsplines_ros/gsplines_ros.hpp>
@@ -248,4 +249,116 @@ interpolate_robot_trajectory(const moveit_msgs::RobotTrajectory &_msg,
                                                     _basis);
 }
 
+std::vector<gsplines::GSpline>
+forward_kinematics_frames(const gsplines::GSpline &joint_trj,
+                          const moveit::core::JointModelGroup *group,
+                          const moveit::core::RobotModelPtr &_model,
+                          const std::vector<std::string> &_links) {
+
+  // 1. Get best approximation of the given curve using gauss-lobatto points
+
+  auto approx = gsplines::collocation::GaussLobattoLagrangeSpline::approximate(
+      joint_trj, 12, 10);
+  auto v = approx.get_domain_discretization();
+
+  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
+      q_values = joint_trj(v);
+
+  auto model = std::make_shared<moveit::core::RobotModel>(*_model);
+  moveit::core::RobotState state(model);
+  for (long i = 0; i < v.size(); i++) {
+    state.setJointGroupPositions(group, q_values.data() + i * q_values.cols());
+    state.updateLinkTransforms();
+    for (const auto &link_name : _links) {
+      state.getLinkModel(link_name);
+    }
+  }
+  return {};
+}
+
+double get_max_frame_speed(const gsplines::GSpline &joint_trj,
+                           const moveit::core::JointModelGroup *group,
+                           const moveit::core::RobotModelPtr &_model,
+                           const std::vector<std::string> &_links,
+                           std::size_t nglp, std::size_t nintervals) {
+
+  // 1. Get best approximation of the given curve using gauss-lobatto points
+
+  auto approx = gsplines::collocation::GaussLobattoLagrangeSpline::approximate(
+      joint_trj, nglp, nintervals);
+  auto v = approx.get_domain_discretization();
+
+  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
+      q_values = joint_trj(v);
+
+  auto model = std::make_shared<moveit::core::RobotModel>(*_model);
+
+  Eigen::MatrixXd jac;
+  moveit::core::RobotState state(model);
+  double max_speed = 0;
+
+  for (long i = 0; i < v.size(); i++) {
+    state.setJointGroupPositions(model->getJointModelGroup(group->getName()),
+                                 q_values.data() + i * q_values.cols());
+    double speed = 0;
+    state.updateLinkTransforms();
+    double max_frame_speed = 0;
+    for (const auto &link_name : _links) {
+
+      state.getJacobian(model->getJointModelGroup(group->getName()),
+                        model->getLinkModel(link_name), Eigen::Vector3d::Zero(),
+                        jac);
+
+      speed = (jac.topRows(3) * q_values.row(i).transpose()).norm();
+      if (speed > max_frame_speed) {
+        max_frame_speed = speed;
+      }
+    }
+    if (max_frame_speed > max_speed) {
+      max_speed = max_frame_speed;
+    }
+  }
+  return max_speed;
+}
+
+double get_max_frame_speed(const gsplines::GSpline &joint_trj,
+                           const moveit::core::JointModelGroup *group,
+                           const moveit::core::RobotModelConstPtr &_model,
+                           std::size_t nglp, std::size_t nintervals) {
+
+  // 1. Get best approximation of the given curve using gauss-lobatto points
+
+  auto approx = gsplines::collocation::GaussLobattoLagrangeSpline::approximate(
+      joint_trj, nglp, nintervals);
+  auto v = approx.get_domain_discretization();
+
+  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
+      q_values = joint_trj(v);
+
+  Eigen::MatrixXd jac;
+  moveit::core::RobotState state(_model);
+  double max_speed = 0;
+  auto _links = group->getLinkModelNames();
+
+  for (long i = 0; i < v.size(); i++) {
+    state.setJointGroupPositions(group, q_values.data() + i * q_values.cols());
+    double speed = 0;
+    state.updateLinkTransforms();
+    double max_frame_speed = 0;
+    for (const auto &link_name : _links) {
+
+      state.getJacobian(group, _model->getLinkModel(link_name),
+                        Eigen::Vector3d::Zero(), jac);
+
+      speed = (jac.topRows(3) * q_values.row(i).transpose()).norm();
+      if (speed > max_frame_speed) {
+        max_frame_speed = speed;
+      }
+    }
+    if (max_frame_speed > max_speed) {
+      max_speed = max_frame_speed;
+    }
+  }
+  return max_speed;
+}
 } // namespace gsplines_moveit

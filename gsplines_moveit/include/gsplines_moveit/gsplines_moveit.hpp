@@ -54,5 +54,22 @@ bool compute_minimum_jerk_trajectory(robot_trajectory::RobotTrajectory &_trj,
 gsplines::GSpline
 interpolate_robot_trajectory(const moveit_msgs::RobotTrajectory &_msg,
                              const gsplines::basis::Basis &_basis);
+
+std::vector<gsplines::GSpline>
+forward_kinematics_frames(const gsplines::GSpline &joint_trj,
+                          const moveit::core::JointModelGroup *group,
+                          const moveit::core::RobotModelPtr &_model,
+                          const std::vector<std::string> &_links);
+
+double get_max_frame_speed(const gsplines::GSpline &joint_trj,
+                           const moveit::core::JointModelGroup *group,
+                           const moveit::core::RobotModelPtr &_model,
+                           const std::vector<std::string> &_links,
+                           std::size_t nglp = 13, std::size_t nintervals = 10);
+
+double get_max_frame_speed(const gsplines::GSpline &joint_trj,
+                           const moveit::core::JointModelGroup *group,
+                           const moveit::core::RobotModelConstPtr &_model,
+                           std::size_t nglp = 13, std::size_t nintervals = 10);
 } // namespace gsplines_moveit
 #endif
