@@ -3,6 +3,7 @@
 #include <eigen3/Eigen/Core>
 #include <gsplines/Basis/Basis.hpp>
 #include <gsplines/GSpline.hpp>
+#include <moveit/planning_interface/planning_request.h>
 #include <moveit/planning_interface/planning_response.h>
 #include <moveit/robot_trajectory/robot_trajectory.h>
 #include <moveit_msgs/RobotTrajectory.h>
@@ -11,6 +12,8 @@ namespace gsplines_moveit {
 
 Eigen::MatrixXd
 robot_trajectory_waypoints(const moveit_msgs::RobotTrajectory &_msg);
+
+Eigen::MatrixXd filterCollinearWaypoints(const Eigen::MatrixXd &_mat);
 
 Eigen::MatrixXd
 robot_trajectory_waypoints(const robot_trajectory::RobotTrajectory &_msg);
@@ -70,6 +73,11 @@ double get_max_frame_speed(const gsplines::GSpline &joint_trj,
 double get_max_frame_speed(const gsplines::GSpline &joint_trj,
                            const moveit::core::JointModelGroup *group,
                            const moveit::core::RobotModelConstPtr &_model,
-                           std::size_t nglp = 13, std::size_t nintervals = 10);
+                           double step = 0.001);
+
+gsplines::GSpline
+scale_trajectory(const gsplines::GSpline &trj,
+                 const planning_interface::MotionPlanRequest &req,
+                 planning_interface::MotionPlanResponse &res);
 } // namespace gsplines_moveit
 #endif

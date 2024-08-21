@@ -3,6 +3,7 @@
 #include <gsplines/Optimization/ipopt_solver.hpp>
 #include <gsplines_moveit/gsplines_moveit.hpp>
 #include <gsplines_ros/gsplines_ros.hpp>
+#include <moveit/planning_interface/planning_request.h>
 
 namespace gsplines_moveit {
 
@@ -10,6 +11,41 @@ struct boundVector {
   std::vector<double> acceleration_bounds;
   std::vector<double> velocity_bounds;
 };
+
+Eigen::MatrixXd filterCollinearWaypoints(const Eigen::MatrixXd &_mat) {
+
+  Eigen::IOFormat OctaveFmt(6, 0, ", ", ",\n", "[", "]", "[", "]");
+
+  std::vector<long> points;
+
+  points.emplace_back(0);
+
+  Eigen::RowVectorXd direction = (_mat.row(1) - _mat.row(0)).normalized();
+  Eigen::RowVectorXd d(direction);
+
+  for (int i = 2; i < _mat.rows(); ++i) {
+    d = (_mat.row(i) - _mat.row(points.back())).normalized();
+
+    if (!d.isApprox(direction)) {
+      points.emplace_back(i - 1);
+      direction = d;
+    }
+  }
+
+  points.emplace_back(_mat.rows() - 1);
+
+  Eigen::MatrixXd result(points.size(), _mat.cols());
+  result.setZero();
+
+  for (int i = 0; i < static_cast<int>(points.size()); i++) {
+    ROS_WARN_STREAM("------------------\n" << result.format(OctaveFmt));
+    result.row(i) = _mat.row(points[i]);
+    ROS_WARN_STREAM("------------------\n"
+                    << result.format(OctaveFmt)
+                    << "\n------------------\n.------------------");
+  }
+  return result;
+}
 
 boundVector getBounds(const moveit::core::JointModelGroup &group,
                       double _vel_factor = 1.0, double _acc_factor = 1.0) {
@@ -84,8 +120,9 @@ robot_trajectory_waypoints(const robot_trajectory::RobotTrajectory &_msg) {
   for (std::size_t i = 0; i < nw; i++) {
     _msg.getWayPoint(i).copyJointGroupPositions(jmg, joint_values);
 
-    result.row(i) = Eigen::Map<const Eigen::Matrix<double, 1, Eigen::Dynamic>>(
-        joint_values.data(), codom_dim);
+    result.row(static_cast<long>(i)) =
+        Eigen::Map<const Eigen::Matrix<double, 1, Eigen::Dynamic>>(
+            joint_values.data(), static_cast<long>(codom_dim));
   }
 
   return result;
@@ -324,23 +361,23 @@ double get_max_frame_speed(const gsplines::GSpline &joint_trj,
 double get_max_frame_speed(const gsplines::GSpline &joint_trj,
                            const moveit::core::JointModelGroup *group,
                            const moveit::core::RobotModelConstPtr &_model,
-                           std::size_t nglp, std::size_t nintervals) {
+                           double step) {
 
-  // 1. Get best approximation of the given curve using gauss-lobatto points
-
-  auto approx = gsplines::collocation::GaussLobattoLagrangeSpline::approximate(
-      joint_trj, nglp, nintervals);
-  auto v = approx.get_domain_discretization();
+  auto time_values = Eigen::VectorXd::LinSpaced(static_cast<long>(1.0 / step),
+                                                joint_trj.get_domain().first,
+                                                joint_trj.get_domain().second);
 
   Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
-      q_values = joint_trj(v);
+      q_values = joint_trj(time_values);
+  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
+      q_dot_values = joint_trj.derivate()(time_values);
 
   Eigen::MatrixXd jac;
   moveit::core::RobotState state(_model);
   double max_speed = 0;
   auto _links = group->getLinkModelNames();
 
-  for (long i = 0; i < v.size(); i++) {
+  for (long i = 0; i < time_values.size(); i++) {
     state.setJointGroupPositions(group, q_values.data() + i * q_values.cols());
     double speed = 0;
     state.updateLinkTransforms();
@@ -350,7 +387,8 @@ double get_max_frame_speed(const gsplines::GSpline &joint_trj,
       state.getJacobian(group, _model->getLinkModel(link_name),
                         Eigen::Vector3d::Zero(), jac);
 
-      speed = (jac.topRows(3) * q_values.row(i).transpose()).norm();
+      speed = (jac.topRows(3) * q_dot_values.row(i).transpose()).norm();
+
       if (speed > max_frame_speed) {
         max_frame_speed = speed;
       }
@@ -360,5 +398,94 @@ double get_max_frame_speed(const gsplines::GSpline &joint_trj,
     }
   }
   return max_speed;
+}
+
+struct _boundVector {
+  std::vector<double> acceleration_bounds;
+  std::vector<double> velocity_bounds;
+};
+std::string vectorToString(const std::vector<double> &v) {
+  std::array<char, 20> buff = {0};
+  std::ostringstream oss;
+  for (const auto &val : v) {
+    std::snprintf(buff.data(), 20, // NOLINT
+                  "%05.2fl", val);
+    oss << buff.data() << " ";
+  }
+  return oss.str();
+}
+_boundVector _getBounds(const moveit::core::JointModelGroup &group,
+                        double _vel_factor = 1.0, double _acc_factor = 1.0) {
+  const auto &joint_names = group.getVariableNames();
+  const auto &rmodel = group.getParentModel();
+  std::vector<double> velocity_bounds;
+  std::vector<double> acceleration_bounds;
+  for (const auto &join_name : joint_names) {
+    const auto &bounds = rmodel.getVariableBounds(join_name);
+
+    // set velocity bounds
+    if (bounds.velocity_bounded_) {
+      const double max_v = std::max(std::abs(bounds.max_velocity_),
+                                    std::abs(bounds.min_velocity_));
+      velocity_bounds.push_back(max_v * _vel_factor);
+    } else {
+      velocity_bounds.push_back(_vel_factor);
+    }
+
+    // set acceleration bounds
+    if (bounds.acceleration_bounded_) {
+      const double max_v = std::max(std::abs(bounds.max_acceleration_),
+                                    std::abs(bounds.min_acceleration_));
+      acceleration_bounds.push_back(max_v * _acc_factor);
+    } else {
+      acceleration_bounds.push_back(_acc_factor);
+    }
+  }
+  return {std::move(velocity_bounds), std::move(acceleration_bounds)};
+}
+
+gsplines::GSpline
+scale_trajectory(const gsplines::GSpline &trj,
+                 const planning_interface::MotionPlanRequest &req,
+                 planning_interface::MotionPlanResponse &res) {
+
+  ROS_INFO_STREAM_NAMED(LOGNAME,
+                        "Scaling trajectory: \n"
+                        "  Velocity scalling factor = "
+                            << req.max_acceleration_scaling_factor
+                            << "\n Acceleration scaling factor "
+                            << req.max_acceleration_scaling_factor); // NOLINT
+  auto bounds =
+      _getBounds(*res.trajectory_->getGroup(), req.max_velocity_scaling_factor,
+                 req.max_acceleration_scaling_factor);
+  ROS_INFO_STREAM_NAMED(
+      LOGNAME, "Scaling trajectory: \n      velocity bounds "
+                   << vectorToString(bounds.velocity_bounds)
+                   << "\n     acceleration bounds "
+                   << vectorToString(bounds.acceleration_bounds)); // NOLINT
+
+  auto trj_1 =
+      trj.linear_scaling_new_execution_time_max_velocity_max_acceleration(
+          bounds.velocity_bounds, bounds.acceleration_bounds, 0.01);
+
+  double max_group_frame_speed =
+      get_max_frame_speed(trj_1, res.trajectory_->getGroup(),
+                          res.trajectory_->getRobotModel(), 0.01);
+
+  ROS_INFO_STREAM_NAMED(LOGNAME, "trajectory scaled to time execution "
+                                     << trj_1.get_domain_length() << " [s]");
+
+  ROS_INFO_STREAM_NAMED(LOGNAME, "The maximum velocity of the frames is "
+                                     << max_group_frame_speed); // NOLINT
+
+  ROS_INFO_STREAM_NAMED(LOGNAME, "Scaling trajectory: \n"
+                                 "  Maximum cartesian speed = "
+                                     << 0.3);
+  if (max_group_frame_speed < 0.3) {
+    return trj_1;
+  }
+  double t0 = trj_1.get_domain_length();
+  return trj_1.linear_scaling_new_execution_time(t0 * max_group_frame_speed /
+                                                 0.3);
 }
 } // namespace gsplines_moveit
