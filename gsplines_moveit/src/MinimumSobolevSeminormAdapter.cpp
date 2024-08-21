@@ -50,17 +50,6 @@ struct _boundVector {
   std::vector<double> velocity_bounds;
 };
 
-std::string vectorToString(const std::vector<double> &v) {
-  std::array<char, 20> buff = {0};
-  std::ostringstream oss;
-  for (const auto &val : v) {
-    std::snprintf(buff.data(), 20, // NOLINT
-                  "%05.2fl", val);
-    oss << buff.data() << " ";
-  }
-  return oss.str();
-}
-
 std::string
 weightsToString(const std::vector<std::pair<std::size_t, double>> &v) {
   std::array<char, 50> buff = {0};
@@ -72,35 +61,6 @@ weightsToString(const std::vector<std::pair<std::size_t, double>> &v) {
     oss << buff.data();
   }
   return oss.str();
-}
-_boundVector _getBounds(const moveit::core::JointModelGroup &group,
-                        double _vel_factor = 1.0, double _acc_factor = 1.0) {
-  const auto &joint_names = group.getVariableNames();
-  const auto &rmodel = group.getParentModel();
-  std::vector<double> velocity_bounds;
-  std::vector<double> acceleration_bounds;
-  for (const auto &join_name : joint_names) {
-    const auto &bounds = rmodel.getVariableBounds(join_name);
-
-    // set velocity bounds
-    if (bounds.velocity_bounded_) {
-      const double max_v = std::max(std::abs(bounds.max_velocity_),
-                                    std::abs(bounds.min_velocity_));
-      velocity_bounds.push_back(max_v * _vel_factor);
-    } else {
-      velocity_bounds.push_back(_vel_factor);
-    }
-
-    // set acceleration bounds
-    if (bounds.acceleration_bounded_) {
-      const double max_v = std::max(std::abs(bounds.max_acceleration_),
-                                    std::abs(bounds.min_acceleration_));
-      acceleration_bounds.push_back(max_v * _acc_factor);
-    } else {
-      acceleration_bounds.push_back(_acc_factor);
-    }
-  }
-  return {std::move(velocity_bounds), std::move(acceleration_bounds)};
 }
 
 static const std::string LOGNAME = "minimum_sobolev_norm_adapter";
@@ -284,8 +244,6 @@ bool MinimumSobolevSeminormAdapter::adaptAndPlan(
   const bool result = planner(planning_scene, req, res);
 
   if (result && res.trajectory_) {
-    const Eigen::MatrixXd waypoints =
-        robot_trajectory_waypoints(*res.trajectory_);
 
     ROS_INFO_STREAM_NAMED(LOGNAME, "Starting optimization");         // NOLINT
     ROS_INFO_STREAM_NAMED(LOGNAME,                                   // NOLINT
@@ -299,10 +257,22 @@ bool MinimumSobolevSeminormAdapter::adaptAndPlan(
     ROS_INFO_STREAM_NAMED(                                           // NOLINT
         LOGNAME, "Number of waypoint: "                              // NOLINT
                      << res.trajectory_->getWayPointCount());        // NOLINT
-    Eigen::IOFormat OctaveFmt(6, 0, ", ", ",\n", "[", "]", "[", "]");
-    ROS_INFO_STREAM_NAMED(                            // NOLINT
-        LOGNAME, "Waypoints: \n"                      // NOLINT
-                     << waypoints.format(OctaveFmt)); // NOLINT
+                                                                     // j
+    const Eigen::MatrixXd waypoints = [&]() {
+      auto wp = robot_trajectory_waypoints(*res.trajectory_);
+      Eigen::IOFormat OctaveFmt(6, 0, ", ", ",\n", "[", "]", "[", "]");
+      ROS_INFO_STREAM_NAMED(                     // NOLINT
+          LOGNAME, "Waypoints: \n"               // NOLINT
+                       << wp.format(OctaveFmt)); // NOLINT
+      if (wp.rows() > 8) {
+        wp = filterCollinearWaypoints(wp);
+        ROS_INFO_STREAM_NAMED( // NOLINT
+            LOGNAME,
+            "Too Many waypoints, we have filtered them: \n" // NOLINT
+                << wp.format(OctaveFmt));
+      }
+      return wp;
+    }();
 
     ///--------------------
     // result = compute_minimum_sobolev_semi_norm_robot_trajectory(
@@ -319,38 +289,10 @@ bool MinimumSobolevSeminormAdapter::adaptAndPlan(
 
     ROS_INFO_STREAM_NAMED(LOGNAME, "Optimization finished"); // NOLINT
 
-    ROS_INFO_STREAM_NAMED(LOGNAME,
-                          "Scaling trajectory: \n"
-                          "  Velocity scalling factor = "
-                              << req.max_acceleration_scaling_factor
-                              << "\n Acceleration scaling factor "
-                              << req.max_acceleration_scaling_factor); // NOLINT
-    auto bounds = _getBounds(*res.trajectory_->getGroup(),
-                             req.max_velocity_scaling_factor,
-                             req.max_acceleration_scaling_factor);
-    ROS_INFO_STREAM_NAMED(
-        LOGNAME, "Scaling trajectory: \n      velocity bounds "
-                     << vectorToString(bounds.velocity_bounds)
-                     << "\n     acceleration bounds "
-                     << vectorToString(bounds.acceleration_bounds)); // NOLINT
-
     /// Apply trajectory scaling
-    auto trj2 = [&]() {
-      auto trj_1 =
-          trj.linear_scaling_new_execution_time_max_velocity_max_acceleration(
-              bounds.velocity_bounds, bounds.acceleration_bounds, 0.01);
 
-      double max_group_frame_speed = get_max_frame_speed(
-          trj_1, res.trajectory_->getGroup(), res.trajectory_->getRobotModel());
-      ROS_INFO_STREAM_NAMED(LOGNAME, "The maximum velocity of the frames is "
-                                         << max_group_frame_speed); // NOLINT
-      if (max_group_frame_speed < 0.3) {
-        return trj_1;
-      }
-      double t0 = trj_1.get_domain_length();
-      return trj_1.linear_scaling_new_execution_time(
-          t0 * max_group_frame_speed / 0.3);
-    }();
+    auto trj2 = scale_trajectory(trj, req, res);
+
     ROS_INFO_STREAM_NAMED(LOGNAME, "Scaling trajectory: ok, execution time is "
                                        << trj2.get_domain_length()); // NOLINT
 
