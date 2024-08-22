@@ -128,163 +128,168 @@ robot_trajectory_waypoints(const robot_trajectory::RobotTrajectory &_msg) {
   return result;
 }
 
-gsplines::GSpline
-minimum_sobolev_semi_norm(const moveit_msgs::RobotTrajectory &_msg,
-                          const gsplines::basis::Basis &_basis,
-                          std::vector<std::pair<std::size_t, double>> _weights,
-                          double _exec_time) {
+// gsplines::GSpline
+// minimum_sobolev_semi_norm(const moveit_msgs::RobotTrajectory &_msg,
+//                           const gsplines::basis::Basis &_basis,
+//                           std::vector<std::pair<std::size_t, double>>
+//                           _weights, double _exec_time) {
 
-  Eigen::MatrixXd waypoint = robot_trajectory_waypoints(_msg);
+//   Eigen::MatrixXd waypoint = robot_trajectory_waypoints(_msg);
 
-  return gsplines::optimization::optimal_sobolev_norm(waypoint, _basis,
-                                                      _weights, _exec_time);
-}
+//   return gsplines::optimization::optimal_sobolev_norm(waypoint, _basis,
+//                                                       _weights, _exec_time);
+// }
 
-gsplines::GSpline
-minimum_sobolev_semi_norm(const robot_trajectory::RobotTrajectory &_trj,
-                          const gsplines::basis::Basis &_basis,
-                          std::vector<std::pair<std::size_t, double>> _weights,
-                          double _exec_time) {
+// gsplines::GSpline
+// minimum_sobolev_semi_norm(const robot_trajectory::RobotTrajectory &_trj,
+//                           const gsplines::basis::Basis &_basis,
+//                           std::vector<std::pair<std::size_t, double>>
+//                           _weights, double _exec_time) {
 
-  Eigen::MatrixXd waypoint = robot_trajectory_waypoints(_trj);
+//   Eigen::MatrixXd waypoint = robot_trajectory_waypoints(_trj);
 
-  return gsplines::optimization::optimal_sobolev_norm(waypoint, _basis,
-                                                      _weights, _exec_time);
-}
+//   return gsplines::optimization::optimal_sobolev_norm(waypoint, _basis,
+//                                                       _weights, _exec_time);
+// }
 
-robot_trajectory::RobotTrajectory minimum_sobolev_semi_norm_robot_trajectory(
-    const robot_trajectory::RobotTrajectory &_trj,
-    const gsplines::basis::Basis &_basis,
-    std::vector<std::pair<std::size_t, double>> _weights, double _exec_time,
-    const ros::Duration &_step, const std_msgs::Header _header) {
+// robot_trajectory::RobotTrajectory minimum_sobolev_semi_norm_robot_trajectory(
+//     const robot_trajectory::RobotTrajectory &_trj,
+//     const gsplines::basis::Basis &_basis,
+//     std::vector<std::pair<std::size_t, double>> _weights, double _exec_time,
+//     const ros::Duration &_step, const std_msgs::Header _header) {
 
-  const moveit::core::JointModelGroup *group = _trj.getGroup();
-  const moveit::core::RobotModel &rmodel = group->getParentModel();
+//   const moveit::core::JointModelGroup *group = _trj.getGroup();
+//   const moveit::core::RobotModel &rmodel = group->getParentModel();
 
-  // const std::vector<int> &idx = group->getVariableIndexList();
-  const std::vector<std::string> &joint_names = group->getVariableNames();
+//   // const std::vector<int> &idx = group->getVariableIndexList();
+//   const std::vector<std::string> &joint_names = group->getVariableNames();
 
-  std::vector<double> velocity_bounds;
-  std::vector<double> acceleration_bounds;
-  std::transform(joint_names.begin(), joint_names.end(),
-                 std::back_inserter(velocity_bounds),
-                 [rmodel](const std::string &_var_name) {
-                   return rmodel.getVariableBounds(_var_name).max_velocity_;
-                 });
+//   std::vector<double> velocity_bounds;
+//   std::vector<double> acceleration_bounds;
+//   std::transform(joint_names.begin(), joint_names.end(),
+//                  std::back_inserter(velocity_bounds),
+//                  [rmodel](const std::string &_var_name) {
+//                    return rmodel.getVariableBounds(_var_name).max_velocity_;
+//                  });
 
-  std::transform(joint_names.begin(), joint_names.end(),
-                 std::back_inserter(acceleration_bounds),
-                 [rmodel](const std::string &_var_name) {
-                   return rmodel.getVariableBounds(_var_name).max_acceleration_;
-                 });
+//   std::transform(joint_names.begin(), joint_names.end(),
+//                  std::back_inserter(acceleration_bounds),
+//                  [rmodel](const std::string &_var_name) {
+//                    return
+//                    rmodel.getVariableBounds(_var_name).max_acceleration_;
+//                  });
 
-  Eigen::MatrixXd waypoints = robot_trajectory_waypoints(_trj);
+//   Eigen::MatrixXd waypoints = robot_trajectory_waypoints(_trj);
 
-  trajectory_msgs::JointTrajectory joint_trajectory =
-      gsplines_ros::minimum_sobolev_semi_norm_joint_trajectory(
-          waypoints, joint_names, _basis, _weights, _exec_time, _step, _header);
+//   trajectory_msgs::JointTrajectory joint_trajectory =
+//       gsplines_ros::minimum_sobolev_semi_norm_joint_trajectory(
+//           waypoints, joint_names, _basis, _weights, _exec_time, _step,
+//           _header);
 
-  robot_trajectory::RobotTrajectory result(_trj, true);
+//   robot_trajectory::RobotTrajectory result(_trj, true);
 
-  result.setRobotTrajectoryMsg(_trj.getFirstWayPoint(), joint_trajectory);
+//   result.setRobotTrajectoryMsg(_trj.getFirstWayPoint(), joint_trajectory);
 
-  return result;
-}
+//   return result;
+// }
 
-bool compute_minimum_sobolev_semi_norm_robot_trajectory(
-    robot_trajectory::RobotTrajectory &_trj,
-    const gsplines::basis::Basis &_basis,
-    std::vector<std::pair<std::size_t, double>> _weights, double _exec_time,
-    const ros::Duration &_step, const std_msgs::Header _header) {
+// bool compute_minimum_sobolev_semi_norm_robot_trajectory(
+//     robot_trajectory::RobotTrajectory &_trj,
+//     const gsplines::basis::Basis &_basis,
+//     std::vector<std::pair<std::size_t, double>> _weights, double _exec_time,
+//     const ros::Duration &_step, const std_msgs::Header _header) {
 
-  // 1. Get joint names
-  const std::vector<std::string> &joint_names =
-      _trj.getGroup()->getParentModel().getVariableNames();
+//   // 1. Get joint names
+//   const std::vector<std::string> &joint_names =
+//       _trj.getGroup()->getParentModel().getVariableNames();
 
-  // 2. Get waypoints
+//   // 2. Get waypoints
 
-  Eigen::MatrixXd waypoints = robot_trajectory_waypoints(_trj);
+//   Eigen::MatrixXd waypoints = robot_trajectory_waypoints(_trj);
 
-  // 3. optimize
-  trajectory_msgs::JointTrajectory joint_trajectory =
-      gsplines_ros::minimum_sobolev_semi_norm_joint_trajectory(
-          waypoints, joint_names, _basis, _weights, _exec_time, _step, _header);
+//   // 3. optimize
+//   trajectory_msgs::JointTrajectory joint_trajectory =
+//       gsplines_ros::minimum_sobolev_semi_norm_joint_trajectory(
+//           waypoints, joint_names, _basis, _weights, _exec_time, _step,
+//           _header);
 
-  // 5. Set pitüit from trajectory message
-  // 5.1 copy the first state to have a reference.
-  const moveit::core::RobotState copy(_trj.getFirstWayPoint());
-  _trj.setRobotTrajectoryMsg(copy, joint_trajectory);
-  return true;
-}
-bool compute_minimum_sobolev_semi_norm_robot_trajectory(
-    robot_trajectory::RobotTrajectory &_trj,
-    const gsplines::basis::Basis &_basis,
-    std::vector<std::pair<std::size_t, double>> _weights,
-    const ros::Duration &_step, //< time step between waypoints
-    double _vel_factor,         //< velocity scaling
-    double _acc_factor,         // < acceleration scaling
-    const std::optional<double> &_exec_time) {
-  // 1. Get the robot model from the moveit's robot_trajectory
-  const moveit::core::JointModelGroup *group = _trj.getGroup();
+//   // 5. Set pitüit from trajectory message
+//   // 5.1 copy the first state to have a reference.
+//   const moveit::core::RobotState copy(_trj.getFirstWayPoint());
+//   _trj.setRobotTrajectoryMsg(copy, joint_trajectory);
+//   return true;
+// }
+// bool compute_minimum_sobolev_semi_norm_robot_trajectory(
+//     robot_trajectory::RobotTrajectory &_trj,
+//     const gsplines::basis::Basis &_basis,
+//     std::vector<std::pair<std::size_t, double>> _weights,
+//     const ros::Duration &_step, //< time step between waypoints
+//     double _vel_factor,         //< velocity scaling
+//     double _acc_factor,         // < acceleration scaling
+//     const std::optional<double> &_exec_time) {
+//   // 1. Get the robot model from the moveit's robot_trajectory
+//   const moveit::core::JointModelGroup *group = _trj.getGroup();
 
-  // const std::vector<int> &idx = group->getVariableIndexList();
-  const std::vector<std::string> &joint_names = group->getVariableNames();
+//   // const std::vector<int> &idx = group->getVariableIndexList();
+//   const std::vector<std::string> &joint_names = group->getVariableNames();
 
-  // 2. Get upper velocity and acceleration bounds of the trajectory
-  auto bounds = getBounds(*group, _vel_factor, _acc_factor);
-  // 3. Get waypoints from trajecotry
-  Eigen::MatrixXd waypoints = robot_trajectory_waypoints(_trj);
+//   // 2. Get upper velocity and acceleration bounds of the trajectory
+//   auto bounds = getBounds(*group, _vel_factor, _acc_factor);
+//   // 3. Get waypoints from trajecotry
+//   Eigen::MatrixXd waypoints = robot_trajectory_waypoints(_trj);
 
-  // 4. optimize, get message
-  trajectory_msgs::JointTrajectory joint_trajectory =
-      gsplines_ros::minimum_sobolev_semi_norm_joint_trajectory(
-          waypoints, joint_names, _basis, _weights, bounds.velocity_bounds,
-          bounds.acceleration_bounds, _step, _exec_time);
+//   // 4. optimize, get message
+//   trajectory_msgs::JointTrajectory joint_trajectory =
+//       gsplines_ros::minimum_sobolev_semi_norm_joint_trajectory(
+//           waypoints, joint_names, _basis, _weights, bounds.velocity_bounds,
+//           bounds.acceleration_bounds, _step, _exec_time);
 
-  // 5. Set pitüit from trajectory message
-  // 5.1 copy the first state to have a reference.
-  const moveit::core::RobotState copy(_trj.getFirstWayPoint());
-  _trj.setRobotTrajectoryMsg(copy, joint_trajectory);
+//   // 5. Set pitüit from trajectory message
+//   // 5.1 copy the first state to have a reference.
+//   const moveit::core::RobotState copy(_trj.getFirstWayPoint());
+//   _trj.setRobotTrajectoryMsg(copy, joint_trajectory);
 
-  return true;
-}
+//   return true;
+// }
 
-bool compute_minimum_jerk_trajectory(robot_trajectory::RobotTrajectory &_trj,
-                                     const ros::Duration &_step,
-                                     double _vel_factor, double _acc_factor) {
+// bool compute_minimum_jerk_trajectory(robot_trajectory::RobotTrajectory &_trj,
+//                                      const ros::Duration &_step,
+//                                      double _vel_factor, double _acc_factor)
+//                                      {
 
-  // 1. Get the robot model from the moveit's robot_trajectory
-  const moveit::core::JointModelGroup *group = _trj.getGroup();
+//   // 1. Get the robot model from the moveit's robot_trajectory
+//   const moveit::core::JointModelGroup *group = _trj.getGroup();
 
-  // const std::vector<int> &idx = group->getVariableIndexList();
-  const std::vector<std::string> &joint_names = group->getVariableNames();
+//   // const std::vector<int> &idx = group->getVariableIndexList();
+//   const std::vector<std::string> &joint_names = group->getVariableNames();
 
-  // 2. Get upper velocity and acceleration bounds of the trajectory
-  auto bounds = getBounds(*group, _vel_factor, _acc_factor);
-  // 3. Get waypoints from trajecotry
-  Eigen::MatrixXd waypoints = robot_trajectory_waypoints(_trj);
+//   // 2. Get upper velocity and acceleration bounds of the trajectory
+//   auto bounds = getBounds(*group, _vel_factor, _acc_factor);
+//   // 3. Get waypoints from trajecotry
+//   Eigen::MatrixXd waypoints = robot_trajectory_waypoints(_trj);
 
-  // 4. optimize, get message
-  trajectory_msgs::JointTrajectory joint_trajectory =
-      gsplines_ros::minimum_jerk_trajectory(waypoints, joint_names,
-                                            bounds.velocity_bounds,
-                                            bounds.acceleration_bounds, _step);
+//   // 4. optimize, get message
+//   trajectory_msgs::JointTrajectory joint_trajectory =
+//       gsplines_ros::minimum_jerk_trajectory(waypoints, joint_names,
+//                                             bounds.velocity_bounds,
+//                                             bounds.acceleration_bounds,
+//                                             _step);
 
-  // 5. Set pitüit from trajectory message
-  // 5.1 copy the first state to have a reference.
-  const moveit::core::RobotState copy(_trj.getFirstWayPoint());
-  _trj.setRobotTrajectoryMsg(copy, joint_trajectory);
+//   // 5. Set pitüit from trajectory message
+//   // 5.1 copy the first state to have a reference.
+//   const moveit::core::RobotState copy(_trj.getFirstWayPoint());
+//   _trj.setRobotTrajectoryMsg(copy, joint_trajectory);
 
-  return true;
-}
+//   return true;
+// }
 
-gsplines::GSpline
-interpolate_robot_trajectory(const moveit_msgs::RobotTrajectory &_msg,
-                             const gsplines::basis::Basis &_basis) {
+// gsplines::GSpline
+// interpolate_robot_trajectory(const moveit_msgs::RobotTrajectory &_msg,
+//                              const gsplines::basis::Basis &_basis) {
 
-  return gsplines_ros::interpolate_joint_trajectory(_msg.joint_trajectory,
-                                                    _basis);
-}
+//   return gsplines_ros::interpolate_joint_trajectory(_msg.joint_trajectory,
+//                                                     _basis);
+// }
 
 std::vector<gsplines::GSpline>
 forward_kinematics_frames(const gsplines::GSpline &joint_trj,
@@ -484,6 +489,7 @@ scale_trajectory(const gsplines::GSpline &trj,
   if (max_group_frame_speed < 0.3) {
     return trj_1;
   }
+  return trj_1;
   double t0 = trj_1.get_domain_length();
   return trj_1.linear_scaling_new_execution_time(t0 * max_group_frame_speed /
                                                  0.3);

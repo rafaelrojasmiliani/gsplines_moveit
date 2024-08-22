@@ -86,6 +86,7 @@ public:
 
   ros::ServiceServer get_basis_server_;
   ros::Publisher gspline_publisher_;
+  ros::Publisher gspline_publisher_2_;
 
   ros::NodeHandle nh_prv_{"~"};
 
@@ -101,6 +102,8 @@ public:
 
     gspline_publisher_ = nh_prv_.advertise<gsplines_msgs::JointGSpline>(
         "gsplines_moveit/planned_gspline", 1000);
+    gspline_publisher_2_ = nh_prv_.advertise<gsplines_msgs::JointGSpline>(
+        "gsplines_moveit/planned_gspline_2", 1000);
   }
 
   bool get_basis(typename GetBasisSrv::Request &req, // NOLINT
@@ -282,16 +285,23 @@ bool MinimumSobolevSeminormAdapter::adaptAndPlan(
     //     m_impl->exec_time(res.trajectory_->getWayPointCount()));
 
     /// Optimization is here
-    const gsplines::GSpline trj = gsplines::optimization::optimal_sobolev_norm(
+    const auto trj = gsplines::optimization::optimal_sobolev_norm(
         waypoints, *m_impl->basis, m_impl->weights,
         m_impl->exec_time(
             static_cast<int>(res.trajectory_->getWayPointCount())));
+    if (!trj.has_value()) {
+      ROS_ERROR_STREAM_NAMED(LOGNAME, "Failes to optimize the trajectory");
+      return false;
+    }
+    m_impl->gspline_publisher_2_.publish(
+        gsplines_ros::gspline_to_joint_gspline_msg(
+            trj.value(), res.trajectory_->getGroup()->getVariableNames()));
 
     ROS_INFO_STREAM_NAMED(LOGNAME, "Optimization finished"); // NOLINT
 
     /// Apply trajectory scaling
 
-    auto trj2 = scale_trajectory(trj, req, res);
+    auto trj2 = scale_trajectory(trj.value(), req, res);
 
     ROS_INFO_STREAM_NAMED(LOGNAME, "Scaling trajectory: ok, execution time is "
                                        << trj2.get_domain_length()); // NOLINT
@@ -304,14 +314,10 @@ bool MinimumSobolevSeminormAdapter::adaptAndPlan(
     if (m_impl->nh_prv_.hasParam("moveit_controller_manager") &&
         m_impl->nh_prv_.getParam("moveit_controller_manager", s) &&
         s == "gsplines_moveit/GSplinesControllerManager") {
-      ROS_INFO_STREAM_NAMED(LOGNAME, // NOLINT
-                            "Generating minimum trajectory message to be "
-                            "acquired by GSplinesControllerManager"); // NOLINT
       trj_msg = gsplines_ros::gspline_to_minimal_joint_trajectory_msg(
           trj2, res.trajectory_->getGroup()->getVariableNames());
 
     } else {
-      ROS_INFO_STREAM_NAMED(LOGNAME, "Generating Trajectory message"); // NOLINT
       trj_msg = gsplines_ros::function_to_joint_trajectory_msg(
           trj2, res.trajectory_->getGroup()->getVariableNames(),
           ros::Duration(0.01));
@@ -326,8 +332,6 @@ bool MinimumSobolevSeminormAdapter::adaptAndPlan(
     }
     const moveit::core::RobotState copy(res.trajectory_->getFirstWayPoint());
     res.trajectory_->setRobotTrajectoryMsg(copy, trj_msg);
-    ROS_INFO_STREAM_NAMED(LOGNAME,                              // NOLINT
-                          "Generating Trajectory message: ok"); // NOLINT
     ///--------------------
     return result;
   }
