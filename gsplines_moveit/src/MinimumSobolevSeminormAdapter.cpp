@@ -69,11 +69,11 @@ class MinimumSobolevSeminormAdapter::Impl {
 public:
   using GetBasisSrv = gsplines_msgs::GetBasis;
   std::unique_ptr<gsplines::basis::Basis> basis;
+  std::unique_ptr<gsplines::basis::Basis> basis_after_scaling_;
   std::vector<std::pair<std::size_t, double>> weights;
 
   ProblemType problem_type_ = ProblemType::MinimumVelocity;
 
-  double k_{};
   std::size_t polynomial_degree_{};
   std::function<double(int)> exec_time;
 
@@ -86,7 +86,7 @@ public:
 
   ros::ServiceServer get_basis_server_;
   ros::Publisher gspline_publisher_;
-  ros::Publisher gspline_publisher_2_;
+  ros::Publisher gspline_unscaled_publisher_;
 
   ros::NodeHandle nh_prv_{"~"};
 
@@ -102,15 +102,16 @@ public:
 
     gspline_publisher_ = nh_prv_.advertise<gsplines_msgs::JointGSpline>(
         "gsplines_moveit/planned_gspline", 1000);
-    gspline_publisher_2_ = nh_prv_.advertise<gsplines_msgs::JointGSpline>(
-        "gsplines_moveit/planned_gspline_2", 1000);
+    gspline_unscaled_publisher_ =
+        nh_prv_.advertise<gsplines_msgs::JointGSpline>(
+            "gsplines_moveit/planned_unscaled_gspline", 1000);
   }
 
   bool get_basis(typename GetBasisSrv::Request &req, // NOLINT
                  typename GetBasisSrv::Response &res) {
 
     (void)req;
-    res.basis = gsplines_ros::basis_to_basis_msg(*this->basis);
+    res.basis = gsplines_ros::basis_to_basis_msg(*this->basis_after_scaling_);
     res.success = true; // NOLINT
     res.message = "";
     return true;
@@ -148,17 +149,18 @@ public:
       break;
     case 3: {
       this->problem_type_ = ProblemType::Rojas;
-      k_ = _cfg.kFactor;
-      const double k4 = std::pow(k_, 4);
+      ROS_INFO_STREAM("Rojas method: k = " << _cfg.kFactor);
+      const double k4 = std::pow(_cfg.kFactor, 4);
       const double alpha = k4 / (1.0 + k4);
       basis = std::make_unique<gsplines::basis::Basis0101>(alpha);
       weights.emplace_back(1, alpha);
       weights.emplace_back(3, 1.0 - alpha);
       exec_time = [](int numberOfWaypoints) -> double {
-        return 4.0 * float(numberOfWaypoints - 1) / std::sqrt(2.0);
+        return 4.0 * static_cast<double>(numberOfWaypoints - 1) /
+               std::sqrt(2.0);
       };
       break;
-    }
+    } break;
     case 4:
       this->problem_type_ = ProblemType::Custom;
       weights.emplace_back(1, _cfg.weight1);
@@ -248,19 +250,7 @@ bool MinimumSobolevSeminormAdapter::adaptAndPlan(
 
   if (result && res.trajectory_) {
 
-    ROS_INFO_STREAM_NAMED(LOGNAME, "Starting optimization");         // NOLINT
-    ROS_INFO_STREAM_NAMED(LOGNAME,                                   // NOLINT
-                          "Basis " << m_impl->basis->get_name());    // NOLINT
-    ROS_INFO_STREAM_NAMED(                                           // NOLINT
-        LOGNAME, "Problem type "                                     // NOLINT
-                     << problemTypeToString(m_impl->problem_type_)); // NOLINT
-    ROS_INFO_STREAM_NAMED(                                           // NOLINT
-        LOGNAME, "Weights\n"                                         // NOLINT
-                     << weightsToString(m_impl->weights));           // NOLINT
-    ROS_INFO_STREAM_NAMED(                                           // NOLINT
-        LOGNAME, "Number of waypoint: "                              // NOLINT
-                     << res.trajectory_->getWayPointCount());        // NOLINT
-                                                                     // j
+    // j
     const Eigen::MatrixXd waypoints = [&]() {
       auto wp = robot_trajectory_waypoints(*res.trajectory_);
       Eigen::IOFormat OctaveFmt(6, 0, ", ", ",\n", "[", "]", "[", "]");
@@ -285,15 +275,38 @@ bool MinimumSobolevSeminormAdapter::adaptAndPlan(
     //     m_impl->exec_time(res.trajectory_->getWayPointCount()));
 
     /// Optimization is here
+    ROS_INFO_STREAM_NAMED(LOGNAME, "Starting optimization");         // NOLINT
+    ROS_INFO_STREAM_NAMED(LOGNAME,                                   // NOLINT
+                          "Basis " << m_impl->basis->get_name());    // NOLINT
+    ROS_INFO_STREAM_NAMED(                                           // NOLINT
+        LOGNAME, "Problem type "                                     // NOLINT
+                     << problemTypeToString(m_impl->problem_type_)); // NOLINT
+    ROS_INFO_STREAM_NAMED(                                           // NOLINT
+        LOGNAME, "Weights\n"                                         // NOLINT
+                     << weightsToString(m_impl->weights));           // NOLINT
+    ROS_INFO_STREAM_NAMED(                                           // NOLINT
+        LOGNAME, "Number of waypoint: "                              // NOLINT
+                     << waypoints.rows());                           // NOLINT
+    if (auto *b =
+            dynamic_cast<gsplines::basis::Basis0101 *>(m_impl->basis.get())) {
+      ROS_INFO_STREAM_NAMED(               // NOLINT
+          LOGNAME, "alpha: "               // NOLINT
+                       << b->get_alpha()); // NOLINT
+    }
+    ROS_INFO_STREAM_NAMED( // NOLINT
+        LOGNAME,
+        "Execution time "                                              // NOLINT
+            << m_impl->exec_time(static_cast<int>(waypoints.rows()))); // NOLINT
     const auto trj = gsplines::optimization::optimal_sobolev_norm(
         waypoints, *m_impl->basis, m_impl->weights,
-        m_impl->exec_time(
-            static_cast<int>(res.trajectory_->getWayPointCount())));
+        m_impl->exec_time(static_cast<int>(waypoints.rows())));
     if (!trj.has_value()) {
-      ROS_ERROR_STREAM_NAMED(LOGNAME, "Failes to optimize the trajectory");
+      ROS_ERROR_STREAM_NAMED(LOGNAME,
+                             "GSplines: Failed to optimize the trajectory");
       return false;
     }
-    m_impl->gspline_publisher_2_.publish(
+
+    m_impl->gspline_unscaled_publisher_.publish(
         gsplines_ros::gspline_to_joint_gspline_msg(
             trj.value(), res.trajectory_->getGroup()->getVariableNames()));
 
@@ -307,7 +320,7 @@ bool MinimumSobolevSeminormAdapter::adaptAndPlan(
                                        << trj2.get_domain_length()); // NOLINT
 
     // workarround to handle basis0101, which change when time-scaled.
-    m_impl->basis = trj2.get_basis().clone();
+    m_impl->basis_after_scaling_ = trj2.get_basis().clone();
     ///
     std::string s;
     trajectory_msgs::JointTrajectory trj_msg;
@@ -328,7 +341,8 @@ bool MinimumSobolevSeminormAdapter::adaptAndPlan(
 
     if ((trj_msg.header.stamp + trj_msg.points.back().time_from_start)
             .isZero()) {
-      ROS_ERROR_STREAM_NAMED(LOGNAME, "Zero time trj"); // NOLINT
+      ROS_ERROR_STREAM_NAMED(
+          LOGNAME, "The trajectory computed has zero execution time"); // NOLINT
     }
     const moveit::core::RobotState copy(res.trajectory_->getFirstWayPoint());
     res.trajectory_->setRobotTrajectoryMsg(copy, trj_msg);

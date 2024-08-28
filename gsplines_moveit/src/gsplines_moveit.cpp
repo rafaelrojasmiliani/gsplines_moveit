@@ -38,11 +38,11 @@ Eigen::MatrixXd filterCollinearWaypoints(const Eigen::MatrixXd &_mat) {
   result.setZero();
 
   for (int i = 0; i < static_cast<int>(points.size()); i++) {
-    ROS_WARN_STREAM("------------------\n" << result.format(OctaveFmt));
     result.row(i) = _mat.row(points[i]);
-    ROS_WARN_STREAM("------------------\n"
-                    << result.format(OctaveFmt)
-                    << "\n------------------\n.------------------");
+  }
+  for (int i = 0; i < result.rows() - 1; ++i) {
+    double foo = (result.row(i) - result.row(i + 1)).norm();
+    ROS_INFO_STREAM(" distance between wp " << foo);
   }
   return result;
 }
