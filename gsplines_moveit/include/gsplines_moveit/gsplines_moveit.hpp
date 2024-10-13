@@ -66,12 +66,6 @@ forward_kinematics_frames(const gsplines::GSpline &joint_trj,
 
 double get_max_frame_speed(const gsplines::GSpline &joint_trj,
                            const moveit::core::JointModelGroup *group,
-                           const moveit::core::RobotModelPtr &_model,
-                           const std::vector<std::string> &_links,
-                           std::size_t nglp = 13, std::size_t nintervals = 10);
-
-double get_max_frame_speed(const gsplines::GSpline &joint_trj,
-                           const moveit::core::JointModelGroup *group,
                            const moveit::core::RobotModelConstPtr &_model,
                            double step = 0.001);
 

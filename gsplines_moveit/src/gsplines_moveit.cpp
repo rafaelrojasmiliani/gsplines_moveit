@@ -320,51 +320,6 @@ forward_kinematics_frames(const gsplines::GSpline &joint_trj,
 
 double get_max_frame_speed(const gsplines::GSpline &joint_trj,
                            const moveit::core::JointModelGroup *group,
-                           const moveit::core::RobotModelPtr &_model,
-                           const std::vector<std::string> &_links,
-                           std::size_t nglp, std::size_t nintervals) {
-
-  // 1. Get best approximation of the given curve using gauss-lobatto points
-
-  auto approx = gsplines::collocation::GaussLobattoLagrangeSpline::approximate(
-      joint_trj, nglp, nintervals);
-  auto v = approx.get_domain_discretization();
-
-  Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
-      q_values = joint_trj(v);
-
-  auto model = std::make_shared<moveit::core::RobotModel>(*_model);
-
-  Eigen::MatrixXd jac;
-  moveit::core::RobotState state(model);
-  double max_speed = 0;
-
-  for (long i = 0; i < v.size(); i++) {
-    state.setJointGroupPositions(model->getJointModelGroup(group->getName()),
-                                 q_values.data() + i * q_values.cols());
-    double speed = 0;
-    state.updateLinkTransforms();
-    double max_frame_speed = 0;
-    for (const auto &link_name : _links) {
-
-      state.getJacobian(model->getJointModelGroup(group->getName()),
-                        model->getLinkModel(link_name), Eigen::Vector3d::Zero(),
-                        jac);
-
-      speed = (jac.topRows(3) * q_values.row(i).transpose()).norm();
-      if (speed > max_frame_speed) {
-        max_frame_speed = speed;
-      }
-    }
-    if (max_frame_speed > max_speed) {
-      max_speed = max_frame_speed;
-    }
-  }
-  return max_speed;
-}
-
-double get_max_frame_speed(const gsplines::GSpline &joint_trj,
-                           const moveit::core::JointModelGroup *group,
                            const moveit::core::RobotModelConstPtr &_model,
                            double step) {
 
@@ -473,6 +428,10 @@ scale_trajectory(const gsplines::GSpline &trj,
       trj.linear_scaling_new_execution_time_max_velocity_max_acceleration(
           bounds.velocity_bounds, bounds.acceleration_bounds, 0.01);
 
+  if (!res.trajectory_->getGroup()->isChain()) {
+    return trj_1;
+  }
+
   double max_group_frame_speed =
       get_max_frame_speed(trj_1, res.trajectory_->getGroup(),
                           res.trajectory_->getRobotModel(), 0.01);
@@ -489,7 +448,6 @@ scale_trajectory(const gsplines::GSpline &trj,
   if (max_group_frame_speed < 0.3) {
     return trj_1;
   }
-  return trj_1;
   double t0 = trj_1.get_domain_length();
   return trj_1.linear_scaling_new_execution_time(t0 * max_group_frame_speed /
                                                  0.3);
